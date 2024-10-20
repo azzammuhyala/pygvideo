@@ -93,15 +93,13 @@ class Video:
         pygame.mixer.init()
 
         running = True
-        video = pygvideo.Video('intro.mp4')
-        screen = pygame.display.set_mode((900, 900))
+        video = pygvideo.Video('myvideo.mp4')
+        screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
         clock = pygame.time.Clock()
 
         video_fps = video.get_fps()
 
         video.set_size(screen.get_size())
-        # store temporary cache, to minimize lag but has storage size limitations [OPTIONAL]
-        video.create_cache_frame()
 
         video.prepare()
         video.play(-1)
@@ -166,11 +164,15 @@ class Video:
         self.__original_clip = self.clip.copy()
 
         # load the temporary audio
-        self.__load_audio(load_file=True)
+        # The _reinit property will appear if the reinit method is called,
+        # this is a sign that the init method was called because of reinit
+        # or not which can avoid creating a new file.
+        self.__load_audio(load_file=not hasattr(self, '_reinit'))
 
         # add Video to global
         global _GLOBAL_VIDEO
-        _GLOBAL_VIDEO.append(self)
+        if not _GLOBAL_VIDEO.have(self):
+            _GLOBAL_VIDEO.append(self)
 
     def __getitem__(self, index: _typing.SupportsIndex | slice):
         # get the maximum total frames
@@ -360,7 +362,8 @@ class Video:
             write_audio()
 
     def __unload_audio(self) -> None:
-        self.release()
+        if _pygame.get_init():
+            self.release()
 
         # delete audio temporary file if the file are still there
         if self.__audio_file.exists():
@@ -439,11 +442,11 @@ class Video:
         return (cls.__module__, cls.__qualname__)
 
     def reinit(self) -> None:
-        if not self.__quit:
-            return
-
         # quit or close then re-init
         self.quit()
+        # make a marker
+        self._reinit = 1
+        # init again
         self.__init__(
             filename_or_clip=self.filename_or_clip,
             target_resolution=self.target_resolution,

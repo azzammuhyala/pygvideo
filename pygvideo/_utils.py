@@ -43,6 +43,13 @@ class global_video(list, typing.MutableSequence[T]):
     def is_temp_audio_used(self, filename: Path) -> bool:
         return any(v.get_temp_audio() == filename for v in self)
 
+    def have(self, value) -> bool:
+        for v in self:
+            if v is value:
+                return True
+
+        return False
+
     def index(self, value, start: int = 0, stop: int | None = None) -> int:
         if stop is None:
             stop = len(self)

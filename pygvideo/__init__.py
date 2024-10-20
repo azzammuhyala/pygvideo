@@ -3,7 +3,7 @@ PyGVideo, video for Pygame. Using MoviePy video module to read and organize vide
 """
 
 __all__ = ['Video', 'quit', 'close']
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 
 from ._pygvideo import (
     Video as Video,
@@ -18,7 +18,7 @@ import moviepy
 if 'PYGAME_VIDEO_HIDE_SUPPORT_PROMPT' not in os.environ:
     print(
         f"pygvideo {__version__} ("
-        f"Moviepy {moviepy.__version__}, "
+        f"MoviePy {moviepy.__version__}, "
         f"Pygame {pygame.__version__}, "
         f"Pygame-SDL {'.'.join(map(str, pygame.get_sdl_version()))}, "
         f"Python {'.'.join(map(str, sys.version_info[0:3]))})"

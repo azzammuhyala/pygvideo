@@ -14,15 +14,13 @@ pygame.init()
 pygame.mixer.init()
 
 running = True
-video = pygvideo.Video('intro.mp4')
-screen = pygame.display.set_mode((900, 900))
+video = pygvideo.Video('myvideo.mp4')
+screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
 clock = pygame.time.Clock()
 
 video_fps = video.get_fps()
 
 video.set_size(screen.get_size())
-# store temporary cache, to minimize lag but has storage size limitations [OPTIONAL]
-video.create_cache_frame()
 
 video.prepare()
 video.play(-1)
@@ -561,8 +559,8 @@ This variable checks whether a video is in use or not. It will have the value `'
 
 ## Additional Information
 
-### What's new in version 1.0.0?
-This is the first version of the PyGVideo module. There may be improvements and updates following this release.
+### What's new in version 1.0.1?
+Bug fixes and documentation
 
 ## Kredit
 * Me ([AzzamMuhyala](https://github.com/azzammuhyala))
