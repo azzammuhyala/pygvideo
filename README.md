@@ -60,11 +60,11 @@ Here is a complete documentation explanation regarding PyGVideo:
 
 #### `__init__`
 This functions similarly to `VideoFileClip` in MoviePy and also includes the necessary properties for [`Video`](#class-video). In this method, the following parameters are included:
-- `filename_or_clip`: The video location or directly the `VideoFileClip` class. Ensure the video format is compatible and supported by [`Video`](#class-video).
+- `filename_or_clip`: The video location or directly the `VideoFileClip` or `CompositeVideoClip` class. Ensure the video format is compatible and supported by [`Video`](#class-video).
 - `target_resolution`: The target resolution. Similar to the [`resize`](#resize) method.
 - `logger`: Logger type, consisting of:
     - `'bar'`: Displays a logger with a bar. Useful for tracking audio writing or caching.
-    - `'verbose'`: Displays detailed information about events occurring in `VideoFileClip`. (I’m not sure if this works).
+    - `'verbose'`: Displays detailed information about events occurring. (I’m not sure if this works).
     - `None`: No logger is displayed.
 - `has_mask`: Loads the video with alpha or transparency support. Only available for certain video formats such as WebM.
 - `load_audio_in_prepare`: Creates or generates a temporary audio file when the [`prepare`](#prepare) method is called. If set to `False`, the temporary audio will be loaded earlier. However, it is less recommended if you want to edit the video first before calling [`prepare`](#prepare).
@@ -404,33 +404,25 @@ Cuts the video's duration. The parameters for this method are:
 - `start`: The starting point of the cut, in seconds.
 - `end`: The ending point of the cut, in seconds.
 
+#### `concatenate_clip`
+concatenate the video itself with other videos in 1 video at once. The parameters for this method are:
+- `clip_or_clips`: The clip or clips to be concatenate.
+
+The remaining parameters are the arguments or keyword arguments for the `concatenate_videoclips` function.
+
 #### `add_volume`
 Increases the video's volume. The parameters for this method are:
 - `add`: The amount to increase the volume.
 - `max_volume`: The maximum volume increase allowed. The default is 1 (recommended).
 - `set`: Allows volume adjustment even when the audio is muted. (It will not cause an exception, but no volume change will occur when called).
 
-As before, you can call this method using the `add` operator with the `+` syntax. For example:
-```py
-# regular call
-video.add_volume(0.05)
-# calling with add
-video + 0.05
-```
+In versions below 1.0.1 you can use the `add` operator with this `+` syntax as a method of `add_volume`. In versions 1.1.0 and above this feature is replaced with concatenate video.
 
 #### `sub_volume`
 This method is similar to [`add_volume`](#add_volume), but it is used to decrease the video's volume. The changes are as follows:
 - The `add` parameter is renamed to `sub`.
 - The `max_volume` parameter is renamed to `min_volume`, and its default is 0 (recommended).
-- The operator call changes to `sub` with the `-` syntax.
-
-Sebagai contoh:
-```py
-# regular call
-video.sub_volume(0.05)
-# calling with sub
-video - 0.05
-```
+- No operator is provided for this method.
 
 #### `set_alpha`
 Sets the alpha or transparency for the frame surface. The `value` parameter defines the alpha level, ranging from 0 (fully transparent) to 255 (fully opaque).
@@ -507,14 +499,15 @@ for frame in video:
 ```
 
 #### Comparison Operators
-Several _comparison operators_ such as `__eq__`, `__ne__`, etc., are also available in the [`Video`](#class-video) class. The comparison is not based on object comparison or other criteria, but rather on the video duration. For example, if you want to compare the duration of an intro and outro video, you can use the following code:
+Several _comparison operators_ such as `__lt__`, `__gt__`, `__le__`, and `__ge__` are also available in the [`Video`](#class-video) class. The comparison is not based on object comparison or other criteria (valid on version 1.0.1 and below for `__eq__` and `__ne__` methods), but rather on the video duration. For example, if you want to compare the duration of an intro and outro video, you can use the following code:
 ```py
 intro = pygvideo.Video('intro.mp4')
-outro = pygvideo.Video('intro.mp4')
+outro = pygvideo.Video('outro.mp4')
 
-if intro == outro:
-    print('Same duration!')
-elif intro > outro:
+print(intro == intro) # same like `intro is intro`
+print(intro == outro) # same like `intro is outro`
+
+if intro > outro:
     print('Intro is bigger duration than outro')
 ```
 
@@ -522,8 +515,6 @@ In addition to comparing the [`Video`](#class-video) instances, you can also com
 ```py
 clip = VideoFileClip('someclip.mp4')
 
-if intro == 5000:
-    print('Duration intro is 5s!')
 if outro < clip:
     print('Outro is small than someclip duration')
 ```
@@ -559,8 +550,11 @@ This variable checks whether a video is in use or not. It will have the value `'
 
 ## Additional Information
 
-### What's new in version 1.0.1?
-Bug fixes and documentation
+### What's new in version 1.1.0?
+* Bug fixes and documentation
+* Method changes
+* Addition of new methods
+* [`Video`](#class-video) class now supports `CompositeVideoClip` (composite video)
 
 ## Kredit
 * Me ([AzzamMuhyala](https://github.com/azzammuhyala))

@@ -3,7 +3,7 @@ PyGVideo, video for Pygame. Using MoviePy video module to read and organize vide
 """
 
 __all__ = ['Video', 'quit', 'close']
-__version__ = '1.0.1'
+__version__ = '1.1.0'
 
 from ._pygvideo import (
     Video as Video,

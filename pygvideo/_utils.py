@@ -1,11 +1,12 @@
 import os
 import typing
 from pathlib import Path as PathL
-from moviepy.editor import VideoFileClip
+from moviepy.editor import VideoFileClip, CompositeVideoClip
 
-RealNumber = int | float
+Number = int | float
 Path = os.PathLike[str] | PathL
-MoviePyFx = typing.Callable[[VideoFileClip, typing.Any], VideoFileClip]
+SupportsClip = VideoFileClip | CompositeVideoClip
+MoviePyFx = typing.Callable[[SupportsClip, typing.Any], SupportsClip]
 Excepts = Exception | BaseException
 NameMethod = str
 FloatSecondsValue = float
@@ -42,23 +43,3 @@ class global_video(list, typing.MutableSequence[T]):
 
     def is_temp_audio_used(self, filename: Path) -> bool:
         return any(v.get_temp_audio() == filename for v in self)
-
-    def have(self, value) -> bool:
-        for v in self:
-            if v is value:
-                return True
-
-        return False
-
-    def index(self, value, start: int = 0, stop: int | None = None) -> int:
-        if stop is None:
-            stop = len(self)
-
-        for i, v in enumerate(self[start:stop]):
-            if v is value:
-                return i
-
-        raise ValueError(f'{repr(value)} is not in list or global_video')
-
-    def remove(self, value) -> None:
-        super().pop(self.index(value))
