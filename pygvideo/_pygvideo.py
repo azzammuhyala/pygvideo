@@ -2,24 +2,26 @@ import pygame as _pygame
 import proglog as _proglog
 import tqdm as _tqdm
 import numpy as _np
-
 import moviepy.video.fx.all as _vfx
 from moviepy.editor import concatenate_videoclips as _concatenate_videoclips
 from ._utils import (
     VideoFileClip as _VideoFileClip,
-    CompositeVideoClip as _CompositeVideoClip
+    CompositeVideoClip as _CompositeVideoClip,
+    global_video as _global_video,
+    typing as _typing,
+    PathL as _Path,
+    os as _os,
+    asserter as _assert,
+    name as _name
 )
-
-from ._utils import global_video as _global_video
-from ._utils import typing as _typing
-from ._utils import PathL as _Path
-from ._utils import os as _os
-from ._utils import asserter as _assert
-from ._utils import name as _name
-
 from . import _utils
+from ._video_preview import video_preview as _video_preview
 
-__all__ = ['Video', 'quit', 'close']
+__all__ = [
+    'Video',
+    'quit',
+    'close'
+]
 
 _os.environ['PYGAME_VIDEO_USED'] = '0'
 
@@ -49,6 +51,7 @@ class Video:
         ... while ...:
         ...    for event in pygame.event.get():
         ...        ...
+        ...        video.handle_event(event) # handle the event (OPTIONAL)
         ...    frame = video_player.draw_and_update() # updated, will be returns a frame
         ...    ...
         ... video_player.quit() # clean up resources
@@ -73,8 +76,8 @@ class Video:
 
         Documentation
         -------------
-        Full documentation is on github https://github.com/azzammuhyala/pygvideo.git or on pypi
-        https://pypi.org/project/pygvideo.
+        Full documentation is on [GitHub](https://github.com/azzammuhyala/pygvideo.git) or on
+        [PyPi](https://pypi.org/project/pygvideo).
 
         Bugs
         ----
@@ -105,10 +108,7 @@ class Video:
 
         video_fps = video.get_fps()
 
-        video.set_size(screen.get_size())
-
-        video.prepare()
-        video.play(-1)
+        video.preplay(-1)
 
         while running:
 
@@ -117,11 +117,13 @@ class Video:
                 if event.type == pygame.QUIT:
                     running = False
 
+                video.handle_event(event)
+
             video.draw_and_update(screen, (0, 0))
 
             pygame.display.flip()
 
-            clock.tick(video_fps)
+            clock.tick(video.get_fps())
 
         pygvideo.quit()
         pygame.quit()
@@ -327,17 +329,17 @@ class Video:
         filename = self.clip.filename if isinstance(self.clip, _VideoFileClip) else self.clip
         return (
             f'{".".join(self.__get_mod())}('
-            f'filename_or_clip={repr(filename)},'
-            f' target_resolution={repr(self.target_resolution)},'
-            f' logger={repr(self.logger)},'
-            f' has_mask={repr(self.has_mask)},'
-            f' load_audio_in_prepare={repr(self.load_audio_in_prepare)},'
-            f' cache={repr(self.cache)})'
+            f'filename_or_clip={repr(filename)}, '
+            f'target_resolution={repr(self.target_resolution)}, '
+            f'logger={repr(self.logger)}, '
+            f'has_mask={repr(self.has_mask)}, '
+            f'load_audio_in_prepare={repr(self.load_audio_in_prepare)}, '
+            f'cache={repr(self.cache)})'
         )
 
     def __str__(self) -> str:
         filename = self.clip.filename if isinstance(self.clip, _VideoFileClip) else self.clip
-        return f'<{".".join(self.__get_mod())} filename={repr(filename)}>'
+        return f'<{".".join(self.__get_mod())} filename_or_clip={repr(filename)}>'
 
     def __copy__(self) -> 'Video':
         return self.copy()
@@ -503,7 +505,7 @@ class Video:
         self.__check_video_initialized()
         return (self.clip.w, self.clip.h)
 
-    def get_size(self) -> tuple[int, int]:
+    def get_size(self) -> tuple[int, int] | None:
         self.__check_video_initialized()
         return self.__size
 
@@ -528,7 +530,7 @@ class Video:
             case 'gb':
                 return file_size / 1_073_741_824
             case _:
-                raise _pygame.error(f'unknown unit named {repr(unit)}')
+                raise ValueError(f'unknown unit named {repr(unit)}')
 
     def get_original_width(self) -> int:
         self.__check_video_initialized()
@@ -737,10 +739,29 @@ class Video:
 
         return frame_surface
 
-    def preview(self, *args, **kwargs) -> None:
-        # clip.preview() in moviepy uses pygame window. So this method
-        # can be loaded to see the clip result without executing the main pygame program
-        self.clip.preview(*args, **kwargs)
+    def preview(self, *args, _type_: _typing.Literal['clip', 'ipython-display', 'video-preview'] = 'video-preview', **kwargs) -> None:
+        match _type_:
+
+            case 'clip':
+                # clip.preview() in moviepy uses pygame window. So this method
+                # can be loaded to see the clip result without executing the main pygame program
+                _pygame.display.set_caption('Clip - Preview')
+                self.clip.preview(*args, **kwargs)
+                _pygame.display.set_caption('pygame window')
+
+            case 'ipython-display':
+                self.clip.ipython_display(*args, **kwargs)
+
+            case 'video-preview':
+                global _GLOBAL_VIDEO
+                _assert(
+                    not _GLOBAL_VIDEO.is_any_video_ready(),
+                    _pygame.error('cannot display video preview because one of the Video classes is in use')
+                )
+                _video_preview(self, *args, **kwargs)
+
+            case _:
+                raise ValueError(f'unknown _type_ named {repr(_type_)}')
 
     def prepare(self) -> None:
         self.__check_video_initialized()
@@ -783,7 +804,7 @@ class Video:
         self.__check_audio_loaded()
         _assert(
             isinstance(loops, int),
-            TypeError('loops must be integers type, not ' + _name(loops))
+            TypeError(f'loops must be integers type, not {_name(loops)}')
         )
 
         if self.is_play():
@@ -796,11 +817,18 @@ class Video:
 
         _pygame.mixer.music.play(start=start)
 
+    def preplay(self, *args, **kwargs) -> None:
+        self.prepare()
+        self.play(*args, **kwargs)
+
     def stop(self) -> None:
         self.__check_video_initialized()
         self.__check_audio_loaded()
 
         self.__stop()
+
+    def restop(self) -> None:
+        self.release()
 
     def pause(self) -> None:
         self.__check_video_initialized()
@@ -824,6 +852,12 @@ class Video:
 
         _pygame.mixer.music.unpause()
 
+    def toggle_pause(self) -> None:
+        if self.is_pause():
+            self.unpause()
+        else:
+            self.pause()
+
     def mute(self) -> None:
         if self.is_mute():
             return
@@ -838,10 +872,16 @@ class Video:
         self.set_volume(self.__volume, set=True)
         self.__volume = 0
 
+    def toggle_mute(self) -> None:
+        if self.is_mute():
+            self.unmute()
+        else:
+            self.mute()
+
     def jump(self, ratio: _utils.Number) -> None:
         _assert(
             isinstance(ratio, _utils.Number),
-            TypeError('ratio must be integers or floats, not ' + _name(ratio))
+            TypeError(f'ratio must be integers or floats, not {_name(ratio)}')
         )
         _assert(
             0 <= ratio <= 1,
@@ -852,7 +892,7 @@ class Video:
     def next(self, distance: _utils.SecondsValue) -> None:
         _assert(
             isinstance(distance, _utils.Number),
-            TypeError('distance must be integers or floats, not ' + _name(distance))
+            TypeError(f'distance must be integers or floats, not {_name(distance)}')
         )
         _assert(
             distance >= 0,
@@ -866,7 +906,7 @@ class Video:
     def previous(self, distance: _utils.SecondsValue) -> None:
         _assert(
             isinstance(distance, _utils.Number),
-            TypeError('distance must be integers or floats, not ' + _name(distance))
+            TypeError(f'distance must be integers or floats, not {_name(distance)}')
         )
         _assert(
             distance >= 0,
@@ -880,7 +920,7 @@ class Video:
     def create_cache_frame(self, max_frame: int | None = None) -> None:
         _assert(
             isinstance(max_frame, int | None),
-            TypeError('max_frame must be integers or None, not ' + _name(max_frame))
+            TypeError(f'max_frame must be integers or None, not {_name(max_frame)}')
         )
 
         if max_frame is None:
@@ -937,17 +977,23 @@ class Video:
     def grayscale(self) -> None:
         self.custom_effect(_vfx.blackwhite)
 
-    def crop(self, rect: _pygame.Rect) -> None:
+    def crop(self, rect: _pygame.Rect | tuple | list) -> None:
         _assert(
-            isinstance(rect, _pygame.Rect),
-            TypeError('rect must be rects, not ' + _name(rect))
+            isinstance(rect, _pygame.Rect | tuple | list),
+            TypeError(f'rect must be rects, tuples or lists, not {_name(rect)}')
         )
-        self.custom_effect('crop',
-            x1 = rect.left,
-            y1 = rect.top,
-            width = rect.width,
-            height = rect.height
+        if isinstance(rect, tuple | list):
+            rect = _pygame.Rect(*rect)
+
+        _assert(
+            _pygame.Rect((0, 0), self.get_clip_size()).contains(rect),
+            ValueError('rect outside the video area boundaries')
         )
+
+        self.custom_effect('crop', x1=rect.left,
+                                   y1=rect.top,
+                                   width=rect.width,
+                                   height=rect.height)
         self.resize(rect.size)
 
     def rotate(self, rotate: _utils.Number) -> None:
@@ -960,20 +1006,22 @@ class Video:
             self.custom_effect('resize', newsize=scale_or_size)
 
     def mirror(self, axis: _typing.Literal['x', 'y']) -> None:
-        if axis == 'x':
-            self.custom_effect(_vfx.mirror_x)
-        elif axis == 'y':
-            self.custom_effect(_vfx.mirror_y)
-        else:
-            raise _pygame.error('unknown axis')
+        match axis:
+            case 'x':
+                self.custom_effect(_vfx.mirror_x)
+            case 'y':
+                self.custom_effect(_vfx.mirror_y)
+            case _:
+                raise ValueError(f'unknown axis named {repr(axis)}')
 
     def fade(self, type: _typing.Literal['in', 'out'], duration: _utils.SecondsValue) -> None:
-        if type == 'in':
-            self.custom_effect('fadein', duration=duration)
-        elif type == 'out':
-            self.custom_effect('fadeout', duration=duration)
-        else:
-            raise _pygame.error('unknown type')
+        match type:
+            case 'in':
+                self.custom_effect('fadein', duration=duration)
+            case 'out':
+                self.custom_effect('fadeout', duration=duration)
+            case _:
+                raise ValueError(f'unknown type named {repr(type)}')
 
     def cut(self, start: _utils.SecondsValue, end: _utils.SecondsValue) -> None:
         self.custom_effect('subclip', start, end)
@@ -1008,11 +1056,11 @@ class Video:
     def add_volume(self, add: _utils.Number, max_volume: _utils.Number = 1, set: bool = False) -> None:
         _assert(
             isinstance(add, _utils.Number),
-            TypeError('add must be integers or floats, not ' + _name(add))
+            TypeError(f'add must be integers or floats, not {_name(add)}')
         )
         _assert(
             isinstance(max_volume, _utils.Number),
-            TypeError('max_volume must be integers or floats, not ' + _name(max_volume))
+            TypeError(f'max_volume must be integers or floats, not {_name(max_volume)}')
         )
         _assert(
             add >= 0,
@@ -1024,11 +1072,11 @@ class Video:
     def sub_volume(self, sub: _utils.Number, min_volume: _utils.Number = 0, set: bool = False) -> None:
         _assert(
             isinstance(sub, _utils.Number),
-            TypeError('sub must be integers or floats, not ' + _name(sub))
+            TypeError(f'sub must be integers or floats, not {_name(sub)}')
         )
         _assert(
             isinstance(min_volume, _utils.Number),
-            TypeError('min_volume must be integers or floats, not ' + _name(min_volume))
+            TypeError(f'min_volume must be integers or floats, not {_name(min_volume)}')
         )
         _assert(
             sub >= 0,
@@ -1041,7 +1089,7 @@ class Video:
         self.__check_video_initialized()
         _assert(
             isinstance(value, int),
-            TypeError('value must be integers, not ' + _name(value))
+            TypeError(f'value must be integers, not {_name(value)}')
         )
         _assert(
             0 <= value <= 255,
@@ -1061,11 +1109,11 @@ class Video:
 
         _assert(
             isinstance(size, tuple | list),
-            'must be tuples, lists or None, not ' + _name(size)
+            TypeError(f'must be tuples, lists or None, not {_name(size)}')
         )
         _assert(
             size_len == 2,
-            f'size must contain 2 values, not {size_len}'
+            ValueError(f'size must contain 2 values, not {size_len}')
         )
 
         self.__size = tuple(map(int, size))
@@ -1099,6 +1147,58 @@ class Video:
         else:
             raise _pygame.error(f'pos {self.__audio_offset} is out of music range')
 
+    def handle_event(self, event: _pygame.event.Event, volume_adjustment: _utils.Number = 0.05, seek_adjustment: _utils.SecondsValue = 5) -> int | None:
+        if event.type == _pygame.KEYDOWN:
+
+            if event.key == _pygame.K_UP:
+                self.add_volume(volume_adjustment)
+                return event.key
+            elif event.key == _pygame.K_DOWN:
+                self.sub_volume(volume_adjustment)
+                return event.key
+            elif event.key == _pygame.K_LEFT:
+                self.previous(seek_adjustment)
+                return event.key
+            elif event.key == _pygame.K_RIGHT:
+                self.next(seek_adjustment)
+                return event.key
+            elif event.key == _pygame.K_0:
+                self.jump(0)
+                return event.key
+            elif event.key == _pygame.K_1:
+                self.jump(0.1)
+                return event.key
+            elif event.key == _pygame.K_2:
+                self.jump(0.2)
+                return event.key
+            elif event.key == _pygame.K_3:
+                self.jump(0.3)
+                return event.key
+            elif event.key == _pygame.K_4:
+                self.jump(0.4)
+                return event.key
+            elif event.key == _pygame.K_5:
+                self.jump(0.5)
+                return event.key
+            elif event.key == _pygame.K_6:
+                self.jump(0.6)
+                return event.key
+            elif event.key == _pygame.K_7:
+                self.jump(0.7)
+                return event.key
+            elif event.key == _pygame.K_8:
+                self.jump(0.8)
+                return event.key
+            elif event.key == _pygame.K_9:
+                self.jump(0.9)
+                return event.key
+            elif event.key in (_pygame.K_SPACE, _pygame.K_p):
+                self.toggle_pause()
+                return event.key
+            elif event.key == _pygame.K_m:
+                self.toggle_mute()
+                return event.key
+
     def quit(self) -> None:
         if self.__quit:
             return
@@ -1125,7 +1225,6 @@ def quit(show_log: bool = True) -> None:
     if _pygame.get_init() and _pygame.mixer.get_init():
         _pygame.mixer.music.stop()
     # loop all existing videos
-    video: Video
     global _GLOBAL_VIDEO
     for video in _GLOBAL_VIDEO:
         try:

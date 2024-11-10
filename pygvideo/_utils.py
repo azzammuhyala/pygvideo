@@ -24,7 +24,7 @@ def _raised(x, f):
 def asserter(condition: bool, exception: Excepts | str, from_exception: Excepts | None = None) -> None:
     if not condition:
         if isinstance(exception, str):
-            _raised(AssertionError, from_exception)
+            _raised(AssertionError(exception), from_exception)
         _raised(exception, from_exception)
 
 def name(obj: typing.Any) -> str:
@@ -43,3 +43,6 @@ class global_video(list, typing.MutableSequence[T]):
 
     def is_temp_audio_used(self, filename: Path) -> bool:
         return any(v.get_temp_audio() == filename for v in self)
+
+    def is_any_video_ready(self) -> bool:
+        return any(v.is_ready() for v in self)

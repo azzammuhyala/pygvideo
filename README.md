@@ -1,6 +1,11 @@
 # pygvideo
 PyGVideo, video for Pygame. Using MoviePy video module to read and organize videos.
 
+![PyPI Downloads](https://static.pepy.tech/badge/pygvideo)
+![License MIT](https://img.shields.io/badge/license-MIT-orange)
+![Python 3](https://img.shields.io/badge/python-3-yellow)
+![Python 3.10+](https://img.shields.io/badge/python-3.10-yellow)
+
 ## Description
 PyGVideo or PyGameVideo is a Python library, particularly based on the Pygame library, for video playback or editing. You can process or edit videos and play them directly on a Pygame screen. With the MoviePy module or library, you can edit videos such as trimming, cropping, or adding effects available in MoviePy.
 
@@ -18,12 +23,9 @@ video = pygvideo.Video('myvideo.mp4')
 screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
 clock = pygame.time.Clock()
 
-video_fps = video.get_fps()
-
 video.set_size(screen.get_size())
 
-video.prepare()
-video.play(-1)
+video.preplay(-1)
 
 while running:
 
@@ -32,11 +34,13 @@ while running:
         if event.type == pygame.QUIT:
             running = False
 
+        video.handle_event(event)
+
     video.draw_and_update(screen, (0, 0))
 
     pygame.display.flip()
 
-    clock.tick(video_fps)
+    clock.tick(video.get_fps())
 
 pygvideo.quit()
 pygame.quit()
@@ -83,7 +87,7 @@ Retrieves the original clip instance.
 Retrieves the clip instance.
 
 #### `get_filename`
-Retrieves the video filename path.
+Retrieves the video filename path. This will return None if the clip is `CompositeVideoClip`.
 
 #### `get_temp_audio`
 Retrieves the temporary audio filename path.
@@ -236,6 +240,11 @@ FYI, the frame obtained is not a raw frame.
 #### `preview`
 Displays a preview of the video. Equivalent to the code: `video.clip.preview(*args, **kwargs)`.
 
+You can change the type of preview function in the `_type_` parameter with 2 categories, namely:
+- `clip`: from `clip.preview`.
+- `ipython-display`: from `clip.ipython_display`
+- `video-preview`: from `video_preview`.
+
 #### `prepare`
 Prepares the video and audio. This method loads the temporary audio `__temp__.mp3` / `__temp_X__.mp3` and then loads the audio into `pygame.mixer.music`. It also checks whether other [`Video`](#class-video) class instances are active/ready, and if not, raises a `pygame.error`. exception. This method is called after all video editing or configuration is completed so that it only needs to be played with [`play`](#play).
 
@@ -249,8 +258,14 @@ Plays the video and audio. It has the following parameters:
 
 This method cannot be called before [`prepare`](#prepare) is called because the audio must be ready.
 
+#### `preplay`
+[`prepare`](#prepare) and [`play`](#play) video audio at once. The rest of the parameters are the parameters of [`play`](#play).
+
 #### `stop`
 Stops the video and audio.
+
+#### `restop`
+Stops the video and released.
 
 #### `pause`
 Pauses the video and audio. The difference from the [`stop`](#stop) method is that you can still call the [`draw_and_update`](#draw_and_update) method, and the video won't reset to 0 when you call [`unpause`](#unpause).
@@ -258,11 +273,17 @@ Pauses the video and audio. The difference from the [`stop`](#stop) method is th
 #### `unpause`
 Unpauses the video and audio.
 
+#### `toggle_pause`
+Pauses and unpauses video.
+
 #### `mute`
 Mutes the audio. If you call the [`get_volume`](#get_volume) method, it will return 0.
 
 #### `unmute`
 Unmutes the audio.
+
+#### `toggle_mute`
+Mutes and unmutes video.
 
 #### `jump`
 Skips the video to a specific ratio between 0 and 1. The `ratio` parameter determines the video’s skip position. For example, if you want to go to the middle of the video, you can set the parameter as `ratio=0.5` or `ratio=1/2`.
@@ -314,7 +335,7 @@ video.reset()
 
 #### `custom_effect`
 Applies or customizes an `fx` effect from MoviePy or the clip’s methods. There is an important parameter:
-- `func`: The `fx` function or method name as a string.
+- `_func_`: The `fx` function or method name as a string.
 
 The remaining parameters are the arguments or keyword arguments for the `fx` function.
 
@@ -337,14 +358,19 @@ Inverts the video’s colors, making them negative.
 Converts the video to grayscale or black and white.
 
 #### `crop`
-Crops the video using `pygame.Rect`. The `rect` parameter determines the position and size of the cropped area.
+Crops the video using `pygame.Rect` (version 1.2.0 and above you can use tuple or list type with `pygame.Rect` parameter content). The `rect` parameter determines the position and size of the cropped area.
 
 Like before, this method can be called using the `modulus` operator with the `%` syntax. For example:
 ```py
 # regular call
 video.crop(pygame.Rect(0, 0, 100, 100))
+# or
+video.crop((0, 0, 100, 100))
+
 # calling with modulus
 video % pygame.Rect(0, 0, 100, 100)
+# or
+video % (0, 0, 100, 100)
 ```
 
 #### `rotate`
@@ -459,6 +485,12 @@ Sets the volume of the video. The parameters are:
 #### `set_pos`
 Changes the position of the currently playing video in seconds. The `pos` parameter sets the position in seconds for the video to resume. This will raise an exception if the value exceeds the video duration.
 
+#### `handle_event`
+Handles events within the event loop in Pygame, serving as the default controller for the video. This method has the following parameters:
+- `event`: The event from the `pygame.event.get` loop.
+- `volume_adjustment`: The amount to increase or decrease the volume. The default is 0.05.
+- `seek_adjustment`: The amount to skip forward or backward in the video, used with [`next`](#next) or [`previous`](#previous). The default is 5 seconds.
+
 #### `quit`
 Exits, cleans up, and frees the video while also deleting the temporary audio file `__temp__.mp3` / `__temp_X__.mp3`. The `show_log` parameter to determine whether to display error messages or not during the video closing process.
 
@@ -550,12 +582,11 @@ This variable checks whether a video is in use or not. It will have the value `'
 
 ## Additional Information
 
-### What's new in version 1.1.0?
+### What's new in version 1.2.0?
 * Bug fixes and documentation
 * Method changes
 * Addition of new methods
-* [`Video`](#class-video) class now supports `CompositeVideoClip` (composite video)
 
-## Kredit
+### Kredit
 * Me ([AzzamMuhyala](https://github.com/azzammuhyala))
 * [ChatGPT](https://chatgpt.com) -- LOL
