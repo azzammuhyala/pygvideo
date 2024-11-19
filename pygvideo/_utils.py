@@ -1,11 +1,18 @@
 import os
 import typing
 from pathlib import Path as PathL
-from moviepy.editor import VideoFileClip, CompositeVideoClip
+from moviepy.editor import (
+    VideoFileClip,
+    CompositeVideoClip,
+    ImageSequenceClip,
+    AudioFileClip,
+    CompositeAudioClip
+)
 
 Number = int | float
 Path = os.PathLike[str] | PathL
-SupportsClip = VideoFileClip | CompositeVideoClip
+SupportsClip = VideoFileClip | CompositeVideoClip | ImageSequenceClip
+SupportsAudioClip = AudioFileClip | CompositeAudioClip
 MoviePyFx = typing.Callable[[SupportsClip, typing.Any], SupportsClip]
 Excepts = Exception | BaseException
 NameMethod = str
@@ -45,4 +52,4 @@ class global_video(list, typing.MutableSequence[T]):
         return any(v.get_temp_audio() == filename for v in self)
 
     def is_any_video_ready(self) -> bool:
-        return any(v.is_ready() for v in self)
+        return any(v.is_ready for v in self)

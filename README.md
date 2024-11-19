@@ -1,15 +1,29 @@
+<div align="center">
+    <img src="https://pypi-camo.freetls.fastly.net/a0731a2a71ee985354a7c36b6445bfce3cf6e287/68747470733a2f2f7261772e67697468756275736572636f6e74656e742e636f6d2f707967616d652f707967616d652f6d61696e2f646f63732f726553542f5f7374617469632f707967616d655f6c6f676f2e737667" alt="Pygame Logo">
+    <h1></h1>
+    <img src="https://zulko.github.io/moviepy/_static/logo_small.jpeg" alt="MoviePy Logo">
+</div>
+
 # pygvideo
 PyGVideo, video for Pygame. Using MoviePy video module to read and organize videos.
 
-![PyPI Downloads](https://static.pepy.tech/badge/pygvideo)
-![License MIT](https://img.shields.io/badge/license-MIT-orange)
-![Python 3](https://img.shields.io/badge/python-3-yellow)
-![Python 3.10+](https://img.shields.io/badge/python-3.10-yellow)
+<div align="center">
+    <a href="https://pepy.tech/project/pygvideo">
+        <img src="https://static.pepy.tech/badge/pygvideo" alt="PyPI Downloads">
+    </a>
+    <a href="https://en.wikipedia.org/wiki/MIT_License">
+        <img src="https://img.shields.io/badge/license-MIT-orange" alt="License MIT">
+    </a>
+    <a href="https://www.python.org/">
+        <img src="https://img.shields.io/badge/python-3-yellow" alt="Python 3">
+        <img src="https://img.shields.io/badge/python-3.10-yellow" alt="Python 3.10+">
+    </a>
+</div>
 
 ## Description
-PyGVideo or PyGameVideo is a Python library, particularly based on the Pygame library, for video playback or editing. You can process or edit videos and play them directly on a Pygame screen. With the MoviePy module or library, you can edit videos such as trimming, cropping, or adding effects available in MoviePy.
+PyGVideo or PyGameVideo is a Python library, particularly based on the [Pygame](https://www.pygame.org/) library, for video playback or editing. You can process or edit videos and play them directly on a Pygame screen. With the [MoviePy](https://zulko.github.io/moviepy/) module or library, you can edit videos such as trimming, cropping, or adding effects available in MoviePy.
 
-PyGVideo can play videos and sync audio playback. The supported formats by PyGVideo are video formats that contain audio, such as MP4, MOV, AVI, MKV, WMV, FLV, and WebM. Although MoviePy supports non-audio formats like GIF, PyGVideo currently does not support these. PyGVideo works only on Python versions >=3.10, Pygame >= 2.5.0, and MoviePy >= 1.0.3. Below is a simple usage example:
+PyGVideo can play videos and sync audio playback. The supported formats by PyGVideo are video formats that contain audio, such as MP4, MOV, AVI, MKV, WMV, FLV, and WebM. Although MoviePy supports non-audio formats like GIF, PyGVideo currently does not support these. PyGVideo works only on Python versions >=3.10, Pygame >= 2.5.0, and MoviePy >= 1.0.3. Below is a simple usage examples:
 
 ```py
 import pygame
@@ -46,6 +60,22 @@ pygvideo.quit()
 pygame.quit()
 ```
 
+Another example:
+
+```py
+import pygvideo
+
+with pygvideo.Video('myvideo.mp4') as video:
+    # add some effects
+
+    video.preview()
+
+    # if you want to save your edited video:
+    # video.clip.write_videofile('output.mp4')
+
+pygvideo.quit()
+```
+
 In fact, the MoviePy module has some fairly complex methods, and I still need to learn more about this module, so this is what I can provide for you so far :)
 
 ## Installation
@@ -64,7 +94,7 @@ Here is a complete documentation explanation regarding PyGVideo:
 
 #### `__init__`
 This functions similarly to `VideoFileClip` in MoviePy and also includes the necessary properties for [`Video`](#class-video). In this method, the following parameters are included:
-- `filename_or_clip`: The video location or directly the `VideoFileClip` or `CompositeVideoClip` class. Ensure the video format is compatible and supported by [`Video`](#class-video).
+- `filename_or_clip`: The video location or directly the `VideoFileClip`, `CompositeVideoClip` or `ImageSequenceClip` class. Ensure the video format is compatible and supported by [`Video`](#class-video).
 - `target_resolution`: The target resolution. Similar to the [`resize`](#resize) method.
 - `logger`: Logger type, consisting of:
     - `'bar'`: Displays a logger with a bar. Useful for tracking audio writing or caching.
@@ -87,7 +117,7 @@ Retrieves the original clip instance.
 Retrieves the clip instance.
 
 #### `get_filename`
-Retrieves the video filename path. This will return None if the clip is `CompositeVideoClip`.
+Retrieves the video filename path. This will return None if the clip is `CompositeVideoClip` or `ImageSequenceClip`.
 
 #### `get_temp_audio`
 Retrieves the temporary audio filename path.
@@ -318,6 +348,9 @@ video.previous(5)
 video << 5
 ```
 
+#### `seek`
+This method combines the functionality of [`previous`](#previous) and [`next`](#next) into a single function. To skip forward in the video, pass a positive value to the `distance` parameter. To rewind the video, pass a negative value.
+
 #### `create_cache_frame`
 Creates a cache of frames. The difference between this and [`iter_chunk_cache_frame`](#iter_chunk_cache_frame) is that this method is not a generator. You can set the maximum number of frames to cache by passing the `max_frame` parameter as an integer or `None` if you want to cache all frames.
 
@@ -356,6 +389,15 @@ Inverts the video’s colors, making them negative.
 
 #### `grayscale`
 Converts the video to grayscale or black and white.
+
+#### `split`
+Splits the RGB color channels of a [`Video`](#class-video) instance into three new [`Video`](#class-video) instances (the original [`Video`](#class-video) is not modified).
+
+This method accepts initialization parameters for the three resulting videos simultaneously.
+
+This method also includes console logging.
+
+_Note: This method is inspired by `cv2.split`!_
 
 #### `crop`
 Crops the video using `pygame.Rect` (version 1.2.0 and above you can use tuple or list type with `pygame.Rect` parameter content). The `rect` parameter determines the position and size of the cropped area.
@@ -430,6 +472,16 @@ Cuts the video's duration. The parameters for this method are:
 - `start`: The starting point of the cut, in seconds.
 - `end`: The ending point of the cut, in seconds.
 
+#### `reverse`
+Reverses the video playback. This method has the following parameters:
+- `step_sub`: Specifies the step size for cutting the video if an issue occurs during the reversal process. (`vfx.time_mirror` issue). The default is 0.01
+- `max_retries`: The maximum number of retries for video slicing.
+
+The method returns either `None` or one of the following codes:
+- `-1`: The retry limit was exceeded.
+- `-2`: The video duration is less than 0 seconds.
+- `None`: The video was successfully reversed.
+
 #### `concatenate_clip`
 concatenate the video itself with other videos in 1 video at once. The parameters for this method are:
 - `clip_or_clips`: The clip or clips to be concatenate.
@@ -455,6 +507,9 @@ Sets the alpha or transparency for the frame surface. The `value` parameter defi
 
 #### `set_size`
 Adjusts the size of the video frame surface. Unlike the [`resize`](#resize) method, this one only performs a scaling transformation on the surface. The `size` parameter specifies the desired video size. Set it to `None` if you want to reset the size.
+
+#### `set_audio`
+Replaces or assigns audio to the video. The provided audio must be a valid `AudioFileClip` or `CompositeAudioClip`. If the audio duration is shorter than the video's duration, silent audio will be appended to fill the remaining duration.
 
 #### `set_speed`
 Sets the speed of the video clip. The `speed` parameter adjusts the video playback speed.
@@ -582,10 +637,13 @@ This variable checks whether a video is in use or not. It will have the value `'
 
 ## Additional Information
 
-### What's new in version 1.2.0?
-* Bug fixes and documentation
-* Method changes
-* Addition of new methods
+### What's new in version 1.3.0?
+* Bug fixes and documentation.
+* Method changes.
+* Previewer updates.
+* Addition of new methods.
+* The `clip` attribute is now implemented as a property decorator.
+* Methods [`is_cache_full`](#is_cache_full), [`is_ready`](#is_ready), [`is_pause`](#is_pause), [`is_play`](#is_play), [`is_mute`](#is_mute), [`is_quit`](#is_quit), and [`is_close`](#is_close) are now property decorators, starting from version 1.3.0.
 
 ### Kredit
 * Me ([AzzamMuhyala](https://github.com/azzammuhyala))

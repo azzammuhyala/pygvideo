@@ -3,19 +3,24 @@ import proglog as _proglog
 import tqdm as _tqdm
 import numpy as _np
 import moviepy.video.fx.all as _vfx
-from moviepy.editor import concatenate_videoclips as _concatenate_videoclips
+from moviepy.audio.AudioClip import AudioArrayClip as _AudioArrayClip
+from moviepy.editor import (
+    concatenate_videoclips as _concatenate_videoclips,
+    concatenate_audioclips as _concatenate_audioclips
+)
+from ._video_preview import video_preview as _video_preview
 from ._utils import (
     VideoFileClip as _VideoFileClip,
     CompositeVideoClip as _CompositeVideoClip,
+    ImageSequenceClip as _ImageSequenceClip,
     global_video as _global_video,
-    typing as _typing,
     PathL as _Path,
+    typing as _typing,
     os as _os,
     asserter as _assert,
     name as _name
 )
 from . import _utils
-from ._video_preview import video_preview as _video_preview
 
 __all__ = [
     'Video',
@@ -169,7 +174,7 @@ class Video:
             )
 
         # save an original clip
-        self.__original_clip = self.clip.copy()
+        self.__original_clip = self.__clip.copy()
 
         # load the temporary audio
         # The _reinit property will appear if the reinit method is called,
@@ -216,7 +221,7 @@ class Video:
             index = index if index >= 0 else total_frame + index
 
             if 0 <= index < total_frame:
-                return self.get_frame(index * (1 / self.clip.fps))
+                return self.get_frame(index * (1 / self.__clip.fps))
             else:
                 # indeks di luar area frame
                 raise IndexError('Frame index out of range')
@@ -246,8 +251,8 @@ class Video:
 
     def __exit__(self, *args, **kwargs) -> None:
         # exit (in raise condition or not)
-        if hasattr(self, 'clip'):
-            if isinstance(self.clip, _utils.SupportsClip):
+        if hasattr(self, '_Video__clip'):
+            if isinstance(self.__clip, _utils.SupportsClip):
                 self.quit()
 
     def __add__(self, value: _typing.Union[_utils.SupportsClip, 'Video', tuple, list]) -> _typing.Self:
@@ -326,7 +331,7 @@ class Video:
         return self.get_total_frame()
 
     def __repr__(self) -> str:
-        filename = self.clip.filename if isinstance(self.clip, _VideoFileClip) else self.clip
+        filename = self.__clip.filename if isinstance(self.__clip, _VideoFileClip) else self.__clip
         return (
             f'{".".join(self.__get_mod())}('
             f'filename_or_clip={repr(filename)}, '
@@ -338,17 +343,17 @@ class Video:
         )
 
     def __str__(self) -> str:
-        filename = self.clip.filename if isinstance(self.clip, _VideoFileClip) else self.clip
+        filename = self.__clip.filename if isinstance(self.__clip, _VideoFileClip) else self.__clip
         return f'<{".".join(self.__get_mod())} filename_or_clip={repr(filename)}>'
 
     def __copy__(self) -> 'Video':
         return self.copy()
 
-    def __load_audio(self, load: bool | None = None, load_file: bool = False) -> None:
+    def __load_audio(self, load: _typing.Optional[bool] = None, load_file: bool = False) -> None:
 
         def write_audio():
             # trim audio to avoid excess audio duration
-            audio = self.clip.audio#.subclip(0, self.clip.duration - 0.15)
+            audio = self.__clip.audio#.subclip(0, self.__clip.duration - 0.15)
             # check if the video has audio, otherwise it will raise an error
             _assert(
                 audio is not None,
@@ -470,8 +475,8 @@ class Video:
         del self._reinit
 
     def copy(self) -> 'Video':
-        return Video(
-            filename_or_clip=self.clip.copy(),
+        video = Video(
+            filename_or_clip=self.__clip.copy(),
             target_resolution=self.target_resolution,
             logger=self.logger,
             has_mask=self.has_mask,
@@ -479,16 +484,24 @@ class Video:
             cache=self.cache
         )
 
+        video._Video__cache_frames = self.__cache_frames.copy()
+        video._Video__cache_full = self.__cache_full
+
+        video.set_size(self.__size)
+        video.set_alpha(self.__alpha)
+
+        return video
+
     def get_original_clip(self) -> _utils.SupportsClip:
         return self.__original_clip
 
     def get_clip(self) -> _utils.SupportsClip:
-        return self.clip
+        return self.__clip
 
     def get_filename(self) -> _utils.Path | None:
-        if isinstance(self.clip, _CompositeVideoClip):
+        if isinstance(self.__clip, _CompositeVideoClip | _ImageSequenceClip):
             return
-        return self.clip.filename
+        return self.__clip.filename
 
     def get_temp_audio(self) -> _Path:
         return self.__audio_file
@@ -503,7 +516,7 @@ class Video:
 
     def get_clip_size(self) -> tuple[int, int]:
         self.__check_video_initialized()
-        return (self.clip.w, self.clip.h)
+        return (self.__clip.w, self.__clip.h)
 
     def get_size(self) -> tuple[int, int] | None:
         self.__check_video_initialized()
@@ -511,11 +524,11 @@ class Video:
 
     def get_file_size(self, unit: _typing.Literal['b', 'kb', 'mb', 'gb']) -> _utils.Number | None:
         unit = unit.lower().strip()
-        if isinstance(self.clip, _CompositeVideoClip):
+        if isinstance(self.__clip, _CompositeVideoClip | _ImageSequenceClip):
             return None
         try:
             # get file size in bytes
-            file_size = _os.path.getsize(self.clip.filename)
+            file_size = _os.path.getsize(self.__clip.filename)
         except:
             return None
 
@@ -538,7 +551,7 @@ class Video:
 
     def get_clip_width(self) -> int:
         self.__check_video_initialized()
-        return self.clip.w
+        return self.__clip.w
 
     def get_width(self) -> int:
         self.__check_video_initialized()
@@ -550,7 +563,7 @@ class Video:
 
     def get_clip_height(self) -> int:
         self.__check_video_initialized()
-        return self.clip.h
+        return self.__clip.h
 
     def get_height(self) -> int:
         self.__check_video_initialized()
@@ -567,7 +580,7 @@ class Video:
             return -1
         elif not self.__play:
             return -2
-        elif self.is_play():
+        elif self.is_play:
             return float(self.__audio_offset + _pygame.mixer.music.get_pos())
 
         return self.get_duration()
@@ -578,23 +591,23 @@ class Video:
 
     def get_duration(self) -> _utils.FloatMilisecondsValue:
         self.__check_video_initialized()
-        return float(self.clip.duration * 1000)
+        return float(self.__clip.duration * 1000)
 
     def get_start(self) -> _utils.FloatMilisecondsValue:
         self.__check_video_initialized()
-        return float(self.clip.start * 1000)
+        return float(self.__clip.start * 1000)
 
     def get_end(self) -> _utils.FloatMilisecondsValue:
         self.__check_video_initialized()
-        return float(self.clip.end * 1000)
+        return float(self.__clip.end * 1000)
 
     def get_total_frame(self) -> int:
         self.__check_video_initialized()
-        return int(self.clip.duration * self.clip.fps)
+        return int(self.__clip.duration * self.__clip.fps)
 
     def get_fps(self) -> float:
         self.__check_video_initialized()
-        return self.clip.fps
+        return self.__clip.fps
 
     def get_volume(self) -> float:
         self.__check_video_initialized()
@@ -608,7 +621,7 @@ class Video:
     def get_frame(self, index_time: _utils.Number, get_original: bool = False) -> _pygame.Surface:
         self.__check_video_initialized()
 
-        frame = self.clip.get_frame(index_time)
+        frame = self.__clip.get_frame(index_time)
         frame_surface = _pygame.surfarray.make_surface(frame.swapaxes(0, 1))
 
         if not get_original:
@@ -635,7 +648,7 @@ class Video:
         range_ = range_iterable
         is_bar = self.logger == 'bar'
         logger = _proglog.default_bar_logger(self.logger if is_bar else None)
-        blank_surface = _pygame.Surface((self.clip.w, self.clip.h), _pygame.SRCALPHA)
+        blank_surface = _pygame.Surface((self.__clip.w, self.__clip.h), _pygame.SRCALPHA)
         if is_bar:
             range_iterable = _tqdm.tqdm(range_iterable, desc='create cache frame', unit='frame', leave=False)
 
@@ -645,7 +658,7 @@ class Video:
 
         for frame_index in range_iterable:
             try:
-                frame = self.get_frame(frame_index * (1 / self.clip.fps), get_original=True)
+                frame = self.get_frame(frame_index * (1 / self.__clip.fps), get_original=True)
                 self.__add_cache(frame_index, frame)
                 # if the cache can no longer be saved, the generator exits
                 if self.__cache_full:
@@ -669,15 +682,23 @@ class Video:
 
         yield (blank_surface, -1, range_)
 
+    @property
+    def clip(self) -> _utils.SupportsClip:
+        return self.__clip
+
+    @property
     def is_cache_full(self) -> bool:
         return self.__cache_full
 
+    @property
     def is_ready(self) -> bool:
         return self.__ready
 
+    @property
     def is_pause(self) -> bool:
         return self.__pause
 
+    @property
     def is_play(self) -> bool:
         if self.__pause:
             return self.__play
@@ -685,15 +706,54 @@ class Video:
             return False
         return self.__play and _pygame.mixer.music.get_busy()
 
+    @property
     def is_mute(self) -> bool:
         # self.__volume if it is float type it means the audio is muted
         return isinstance(self.__volume, float)
 
+    @property
     def is_quit(self) -> bool:
         return self.__quit
 
+    @property
     def is_close(self) -> bool:
         return self.__quit
+
+    @clip.setter
+    def clip(self, clip: _utils.SupportsClip) -> None:
+        _assert(
+            isinstance(clip, _utils.SupportsClip),
+            TypeError(f'clip must be VideoFileClip, CompositeVideoClip or ImageSequenceClip, not {_name(clip)}')
+        )
+        self.__clip = clip
+
+    @is_ready.setter
+    def is_ready(self, value: bool) -> None:
+        if value:
+            self.prepare()
+        else:
+            self.release()
+
+    @is_pause.setter
+    def is_pause(self, value: bool) -> None:
+        if value:
+            self.pause()
+        else:
+            self.unpause()
+
+    @is_play.setter
+    def is_play(self, value: bool) -> None:
+        if value:
+            self.play()
+        else:
+            self.stop()
+
+    @is_mute.setter
+    def is_mute(self, value: bool) -> None:
+        if value:
+            self.mute()
+        else:
+            self.unmute()
 
     def draw_and_update(self, screen_surface: _typing.Optional[_pygame.Surface] = None, pos: _typing.Any | _pygame.Rect = (0, 0)) -> _pygame.Surface:
         self.__check_video_initialized()
@@ -705,12 +765,12 @@ class Video:
         music_pos = _pygame.mixer.music.get_pos()
 
         if music_pos != -1:
-            self.__frame_index = int(((self.__audio_offset + music_pos) / 1000) * self.clip.fps)
+            self.__frame_index = int(((self.__audio_offset + music_pos) / 1000) * self.__clip.fps)
         else:
             self.__frame_index = self.get_total_frame()
 
         # logic loops
-        if not self.is_play() and self.__loops != 0:
+        if not self.is_play and self.__loops != 0:
             self.__audio_offset = 0
             self.__video_loops += 1
             self.stop()
@@ -721,14 +781,14 @@ class Video:
             if self.__frame_index in self.__cache_frames:
                 frame_surface = self.__cache_frames[self.__frame_index]
             else:
-                frame_surface = self.get_frame(self.__frame_index * (1 / self.clip.fps), get_original=True)
+                frame_surface = self.get_frame(self.__frame_index * (1 / self.__clip.fps), get_original=True)
                 self.__add_cache(self.__frame_index, frame_surface)
 
             if self.__size:
                 frame_surface = _pygame.transform.scale(frame_surface, self.__size)
         except:
             # if there is an error in the frame index, it will load an empty surface image
-            size_surface = self.__size if self.__size else (self.clip.w, self.clip.h)
+            size_surface = self.__size if self.__size else (self.__clip.w, self.__clip.h)
             frame_surface = _pygame.Surface(size_surface)
             frame_surface.fill('black')
 
@@ -746,18 +806,13 @@ class Video:
                 # clip.preview() in moviepy uses pygame window. So this method
                 # can be loaded to see the clip result without executing the main pygame program
                 _pygame.display.set_caption('Clip - Preview')
-                self.clip.preview(*args, **kwargs)
+                self.__clip.preview(*args, **kwargs)
                 _pygame.display.set_caption('pygame window')
 
             case 'ipython-display':
-                self.clip.ipython_display(*args, **kwargs)
+                self.__clip.ipython_display(*args, **kwargs)
 
             case 'video-preview':
-                global _GLOBAL_VIDEO
-                _assert(
-                    not _GLOBAL_VIDEO.is_any_video_ready(),
-                    _pygame.error('cannot display video preview because one of the Video classes is in use')
-                )
                 _video_preview(self, *args, **kwargs)
 
             case _:
@@ -765,14 +820,15 @@ class Video:
 
     def prepare(self) -> None:
         self.__check_video_initialized()
+
+        if self.__ready:
+            return
+
         # check if video class object is in use, if it is in use it will raise error message
         _assert(
             _os.environ['PYGAME_VIDEO_USED'] != '1',
             _pygame.error('cannot use 2 videos at the same time')
         )
-
-        if self.__ready:
-            return
 
         # if the audio temp is lost or deleted, it will automatically load the audio
         if not self.__audio_file.exists():
@@ -807,7 +863,7 @@ class Video:
             TypeError(f'loops must be integers type, not {_name(loops)}')
         )
 
-        if self.is_play():
+        if self.is_play:
             return
 
         self.__play = True
@@ -853,27 +909,27 @@ class Video:
         _pygame.mixer.music.unpause()
 
     def toggle_pause(self) -> None:
-        if self.is_pause():
+        if self.is_pause:
             self.unpause()
         else:
             self.pause()
 
     def mute(self) -> None:
-        if self.is_mute():
+        if self.is_mute:
             return
 
         self.__volume = self.get_volume()
         self.set_volume(0, set=True)
 
     def unmute(self) -> None:
-        if not self.is_mute():
+        if not self.is_mute:
             return
 
         self.set_volume(self.__volume, set=True)
         self.__volume = 0
 
     def toggle_mute(self) -> None:
-        if self.is_mute():
+        if self.is_mute:
             self.unmute()
         else:
             self.mute()
@@ -887,7 +943,7 @@ class Video:
             0 <= ratio <= 1,
             ValueError(f'ratio must be in the range of 0 to 1, not {ratio}')
         )
-        self.set_pos(self.clip.duration * ratio)
+        self.set_pos(self.__clip.duration * ratio)
 
     def next(self, distance: _utils.SecondsValue) -> None:
         _assert(
@@ -901,7 +957,7 @@ class Video:
         if (move := self.get_pos() + distance * 1000) <= self.get_duration():
             self.set_pos(move / 1000)
         else:
-            self.set_pos(self.clip.duration)
+            self.set_pos(self.__clip.duration)
 
     def previous(self, distance: _utils.SecondsValue) -> None:
         _assert(
@@ -917,7 +973,17 @@ class Video:
         else:
             self.set_pos(0)
 
-    def create_cache_frame(self, max_frame: int | None = None) -> None:
+    def seek(self, distance: _utils.Number) -> None:
+        _assert(
+            isinstance(distance, _utils.Number),
+            TypeError(f'distance must be integers or floats, not {_name(distance)}')
+        )
+        if distance <= 0:
+            self.previous(abs(distance))
+        else:
+            self.next(distance)
+
+    def create_cache_frame(self, max_frame: _typing.Optional[int] = None) -> None:
         _assert(
             isinstance(max_frame, int | None),
             TypeError(f'max_frame must be integers or None, not {_name(max_frame)}')
@@ -947,7 +1013,7 @@ class Video:
     def reset(self) -> None:
         self.__set_effect()
 
-        self.clip = self.__original_clip.copy()
+        self.__clip = self.__original_clip.copy()
         self.__size = None
         self.__alpha = 255
 
@@ -958,15 +1024,10 @@ class Video:
         self.__set_effect()
 
         if not isinstance(_func_, _utils.NameMethod):
-            self.clip = _func_(self.clip, *args, **kwargs)
+            self.clip = _func_(self.__clip, *args, **kwargs)
         else:
-            method = getattr(self.clip, _func_)
+            method = getattr(self.__clip, _func_)
             self.clip = method(*args, **kwargs)
-
-        _assert(
-            isinstance(self.clip, _utils.SupportsClip),
-            _pygame.error(f'function unexpectedly returns value other than VideoFileClip or CompositeVideoClip, got {_name(self.clip)}')
-        )
 
         self.__unload_audio()
         self.__load_audio()
@@ -976,6 +1037,50 @@ class Video:
 
     def grayscale(self) -> None:
         self.custom_effect(_vfx.blackwhite)
+
+    def split(self, *args, **kwargs) -> tuple['Video', 'Video', 'Video']:
+        self.__check_video_initialized()
+
+        self.__stop()
+
+        is_bar = self.logger == 'bar'
+        logger = _proglog.default_bar_logger(self.logger if is_bar else None)
+        color_channel = {0: 'RED',
+                         1: 'GREEN',
+                         2: 'BLUE'}
+
+        def extract_channel(channel: _typing.Literal[0, 1, 2]) -> _ImageSequenceClip:
+            frames = []
+            arange = _np.arange(0, self.__clip.duration, 1 / self.__clip.fps)
+
+            color = color_channel[channel]
+
+            if is_bar:
+                range_iterable = _tqdm.tqdm(arange, desc=f'create video color {color}', unit='frame', leave=False)
+            else:
+                range_iterable = arange
+
+            logger(message=f'Video - Create color {color}, channel {channel}/2')
+
+            for t in range_iterable:
+                try:
+                    frame = self.get_frame_array(t, get_original=True)
+                    channel_frame = _np.zeros_like(frame)
+                    channel_frame[:, :, channel] = frame[:, :, channel]
+                    frames.append(channel_frame)
+                except:
+                    pass
+
+            if is_bar:
+                range_iterable.close()
+
+            logger(message=f'Video - Color {color} done.')
+
+            return _ImageSequenceClip(frames, fps=self.__clip.fps).set_audio(self.__clip.audio)
+
+        return (Video(extract_channel(0), *args, **kwargs),
+                Video(extract_channel(1), *args, **kwargs),
+                Video(extract_channel(2), *args, **kwargs))
 
     def crop(self, rect: _pygame.Rect | tuple | list) -> None:
         _assert(
@@ -1026,6 +1131,40 @@ class Video:
     def cut(self, start: _utils.SecondsValue, end: _utils.SecondsValue) -> None:
         self.custom_effect('subclip', start, end)
 
+    def reverse(self, step_sub: _utils.Number = 0.01, max_retries: int = 12) -> _typing.Literal[-1, -2] | None:
+        _assert(
+            isinstance(step_sub, _utils.Number),
+            TypeError(f'step_sub must be integers or floats, not {_name(step_sub)}')
+        )
+        _assert(
+            isinstance(max_retries, int),
+            TypeError(f'max_retries must be integers, not {_name(max_retries)}')
+        )
+        _assert(
+            0.001 <= step_sub <= 1,
+            ValueError(f'step_sub must be in the range of (0.001 to 1)s, not {step_sub}')
+        )
+        _assert(
+            max_retries > 0,
+            ValueError(f'max_retries cannot use under 1')
+        )
+
+        current_time = self.__clip.duration
+
+        while max_retries > 0:
+            try:
+                self.cut(0, current_time)
+                self.custom_effect(_vfx.time_mirror)
+                break
+            except:
+                current_time -= step_sub
+                max_retries -= 1
+                if current_time <= 0:
+                    return -2
+
+        else:
+            return -1
+
     def concatenate_clip(self, clip_or_clips: _typing.Union[_utils.SupportsClip, 'Video', tuple, list], *args, **kwargs) -> None:
         self.__set_effect()
 
@@ -1040,12 +1179,12 @@ class Video:
             for c in clip_or_clips:
                 check(c)
                 clips.append(c if isinstance(c, _utils.SupportsClip) else c.clip)
-            self.clip = _concatenate_videoclips((self.clip, *clips), *args, **kwargs)
+            self.clip = _concatenate_videoclips((self.__clip, *clips), *args, **kwargs)
 
         elif isinstance(clip_or_clips, _utils.SupportsClip | Video):
             check(clip_or_clips)
             clip = clip_or_clips if isinstance(clip_or_clips, _utils.SupportsClip) else clip_or_clips.clip
-            self.clip = _concatenate_videoclips((self.clip, clip), *args, **kwargs)
+            self.clip = _concatenate_videoclips((self.__clip, clip), *args, **kwargs)
 
         else:
             raise typeerror(clip_or_clips)
@@ -1109,7 +1248,7 @@ class Video:
 
         _assert(
             isinstance(size, tuple | list),
-            TypeError(f'must be tuples, lists or None, not {_name(size)}')
+            TypeError(f'size must be tuples, lists or None, not {_name(size)}')
         )
         _assert(
             size_len == 2,
@@ -1117,6 +1256,26 @@ class Video:
         )
 
         self.__size = tuple(map(int, size))
+
+    def set_audio(self, audio: _utils.SupportsAudioClip) -> None:
+        self.__check_video_initialized()
+        _assert(
+            isinstance(audio, _utils.SupportsAudioClip),
+            TypeError(f'audio must be AudioFileClip or CompositeAudioClip, not {_name(audio)}')
+        )
+
+        self.__stop()
+
+        if (duration_diff := (self.__clip.duration - audio.duration)) > 0:
+            fps = 44100
+            silent_audio_array = _np.zeros((int(duration_diff * fps), 2))
+            silent_audio = _AudioArrayClip(silent_audio_array, fps=fps)
+            audio = _concatenate_audioclips((audio, silent_audio))
+
+        self.clip = self.__clip.set_audio(audio)
+
+        self.__unload_audio()
+        self.__load_audio()
 
     def set_speed(self, speed: _utils.Number) -> None:
         self.custom_effect('speedx', speed)
@@ -1130,8 +1289,8 @@ class Video:
 
         # if the audio is currently muted with .mute(), then it will
         # not be able to be changed unless the `set` parameter is True
-        if not self.is_mute() or set:
-            _pygame.mixer.music.set_volume(volume)
+        if not self.is_mute or set:
+            _pygame.mixer.music.set_volume(min(1, max(0, volume)))
 
     def set_pos(self, pos: _utils.SecondsValue) -> None:
         self.__check_video_initialized()
@@ -1148,6 +1307,13 @@ class Video:
             raise _pygame.error(f'pos {self.__audio_offset} is out of music range')
 
     def handle_event(self, event: _pygame.event.Event, volume_adjustment: _utils.Number = 0.05, seek_adjustment: _utils.SecondsValue = 5) -> int | None:
+        self.__check_video_initialized()
+        self.__check_audio_loaded()
+        _assert(
+            isinstance(event, _pygame.event.Event),
+            TypeError(f'event must be Event, not {_name(event)}')
+        )
+
         if event.type == _pygame.KEYDOWN:
 
             if event.key == _pygame.K_UP:
@@ -1205,7 +1371,7 @@ class Video:
 
         # close up all assets
         self.clear_cache_frame()
-        self.clip.close()
+        self.__clip.close()
         self.__original_clip.close()
         self.__unload_audio()
 

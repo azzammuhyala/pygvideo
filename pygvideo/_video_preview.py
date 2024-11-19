@@ -5,6 +5,13 @@ from ._utils import asserter as _assert
 from ._utils import name as _name
 from . import _utils
 
+__all__ = [
+    'video_preview'
+]
+
+def _rgb_to_hex(r, g, b):
+    return "#{:02x}{:02x}{:02x}".format(r, g, b)
+
 def _calculate_video_rect(canvas_wh: tuple[int, int], video_wh: tuple[int, int]) -> pygame.Rect:
     width_screen, height_screen = canvas_wh
     width_video, height_video = video_wh
@@ -89,46 +96,67 @@ def video_preview(
                     screen = pygame.display.set_mode(event.size, pygame.RESIZABLE)
                     video_rect = _calculate_video_rect(event.size, video_size)
 
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+
+                    if event.button == 1:
+
+                        mouse_pos = pygame.mouse.get_pos()
+                        hover_video = video_rect.collidepoint(mouse_pos)
+
+                        if hover_video:
+                            relative_pos = (mouse_pos[0] - video_rect.left,
+                                            mouse_pos[1] - video_rect.top)
+                            color = frame.get_at(relative_pos)
+                            colour_str = f'({color[0]:>3},{color[1]:>3},{color[2]:>3}) {_rgb_to_hex(*color[0:3])}'
+
+                        log(
+                            f'[INFO] Time:     {video.get_pos() / 1000}s\n' +
+                            f'       Position: {mouse_pos}' +
+                            (f'\n       Relative: {relative_pos}\n       Color:    {colour_str}' if hover_video else '')
+                        )
+
                 if (key := video.handle_event(event)) is not None:
 
+                    seconds_pos = video.get_pos() / 1000
+
                     if key == pygame.K_UP:
-                        log(f'[INFO] add_volume 0.05, current volume: {video.get_volume()}')
+                        log(f'[INFO] add_volume 0.05, Current volume: {video.get_volume()}')
                     elif key == pygame.K_DOWN:
-                        log(f'[INFO] sub_volume 0.05, current volume: {video.get_volume()}')
+                        log(f'[INFO] sub_volume 0.05, Current volume: {video.get_volume()}')
                     elif key == pygame.K_LEFT:
-                        log(f'[INFO] previous 5, current pos: {video.get_pos()}')
+                        log(f'[INFO] previous 5, Current time: {seconds_pos}s')
                     elif key == pygame.K_RIGHT:
-                        log(f'[INFO] next 5, current pos: {video.get_pos()}')
+                        log(f'[INFO] next 5, Current time: {seconds_pos}s')
                     elif key == pygame.K_0:
-                        log(f'[INFO] jump 0, current pos: {video.get_pos()}')
+                        log(f'[INFO] jump 0, Current time: {seconds_pos}s')
                     elif key == pygame.K_1:
-                        log(f'[INFO] jump 0.1, current pos: {video.get_pos()}')
+                        log(f'[INFO] jump 0.1, Current time: {seconds_pos}s')
                     elif key == pygame.K_2:
-                        log(f'[INFO] jump 0.2, current pos: {video.get_pos()}')
+                        log(f'[INFO] jump 0.2, Current time: {seconds_pos}s')
                     elif key == pygame.K_3:
-                        log(f'[INFO] jump 0.3, current pos: {video.get_pos()}')
+                        log(f'[INFO] jump 0.3, Current time: {seconds_pos}s')
                     elif key == pygame.K_4:
-                        log(f'[INFO] jump 0.4, current pos: {video.get_pos()}')
+                        log(f'[INFO] jump 0.4, Current time: {seconds_pos}s')
                     elif key == pygame.K_5:
-                        log(f'[INFO] jump 0.5, current pos: {video.get_pos()}')
+                        log(f'[INFO] jump 0.5, Current time: {seconds_pos}s')
                     elif key == pygame.K_6:
-                        log(f'[INFO] jump 0.6, current pos: {video.get_pos()}')
+                        log(f'[INFO] jump 0.6, Current time: {seconds_pos}s')
                     elif key == pygame.K_7:
-                        log(f'[INFO] jump 0.7, current pos: {video.get_pos()}')
+                        log(f'[INFO] jump 0.7, Current time: {seconds_pos}s')
                     elif key == pygame.K_8:
-                        log(f'[INFO] jump 0.8, current pos: {video.get_pos()}')
+                        log(f'[INFO] jump 0.8, Current time: {seconds_pos}s')
                     elif key == pygame.K_9:
-                        log(f'[INFO] jump 0.9, current pos: {video.get_pos()}')
+                        log(f'[INFO] jump 0.9, Current time: {seconds_pos}s')
                     elif key in (pygame.K_SPACE, pygame.K_p):
-                        if video.is_pause():
-                            log('[INFO] video unpaused')
+                        if video.is_pause:
+                            log('[INFO] Video paused')
                         else:
-                            log('[INFO] video paused')
+                            log('[INFO] Video unpaused')
                     elif key == pygame.K_m:
-                        if video.is_mute():
-                            log('[INFO] video unmuted')
+                        if video.is_mute:
+                            log('[INFO] Video muted')
                         else:
-                            log('[INFO] video muted')
+                            log('[INFO] Video unmuted')
 
             frame = video.draw_and_update()
             frame = pygame.transform.scale(frame, video_rect.size)
