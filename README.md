@@ -1,5 +1,5 @@
 <div align="center">
-    <img src="https://pypi-camo.freetls.fastly.net/a0731a2a71ee985354a7c36b6445bfce3cf6e287/68747470733a2f2f7261772e67697468756275736572636f6e74656e742e636f6d2f707967616d652f707967616d652f6d61696e2f646f63732f726553542f5f7374617469632f707967616d655f6c6f676f2e737667" alt="Pygame Logo">
+    <img src="https://raw.githubusercontent.com/pygame/pygame/main/docs/reST/_static/pygame_logo.svg" alt="Pygame Logo">
     <h1></h1>
     <img src="https://zulko.github.io/moviepy/_static/logo_small.jpeg" alt="MoviePy Logo">
 </div>
@@ -23,7 +23,7 @@ PyGVideo, video for Pygame. Using MoviePy video module to read and organize vide
 ## Description
 PyGVideo or PyGameVideo is a Python library, particularly based on the [Pygame](https://www.pygame.org/) library, for video playback or editing. You can process or edit videos and play them directly on a Pygame screen. With the [MoviePy](https://zulko.github.io/moviepy/) module or library, you can edit videos such as trimming, cropping, or adding effects available in MoviePy.
 
-PyGVideo can play videos and sync audio playback. The supported formats by PyGVideo are video formats that contain audio, such as MP4, MOV, AVI, MKV, WMV, FLV, and WebM. Although MoviePy supports non-audio formats like GIF, PyGVideo currently does not support these. PyGVideo works only on Python versions >=3.10, Pygame >= 2.5.0, and MoviePy >= 1.0.3. Below is a simple usage examples:
+PyGVideo can play videos and sync audio playback. The supported formats by PyGVideo are video formats that contain audio, such as MP4, MOV, AVI, MKV, WMV, FLV, and WebM. Although MoviePy supports non-audio formats like GIF, PyGVideo currently does not support these. PyGVideo works only on Python versions >=3.10, Pygame >= 2.5.0, and MoviePy >= 2.1.1. Below is a simple usage examples:
 
 ```py
 import pygame
@@ -98,7 +98,6 @@ This functions similarly to `VideoFileClip` in MoviePy and also includes the nec
 - `target_resolution`: The target resolution. Similar to the [`resize`](#resize) method.
 - `logger`: Logger type, consisting of:
     - `'bar'`: Displays a logger with a bar. Useful for tracking audio writing or caching.
-    - `'verbose'`: Displays detailed information about events occurring. (I’m not sure if this works).
     - `None`: No logger is displayed.
 - `has_mask`: Loads the video with alpha or transparency support. Only available for certain video formats such as WebM.
 - `load_audio_in_prepare`: Creates or generates a temporary audio file when the [`prepare`](#prepare) method is called. If set to `False`, the temporary audio will be loaded earlier. However, it is less recommended if you want to edit the video first before calling [`prepare`](#prepare).
@@ -160,8 +159,8 @@ Retrieves the number of loops played by the video. The loop count will reset to 
 
 #### `get_pos`
 Retrieves the current position of the video while it's playing. Returns a floats or a value in milliseconds, or one of the following codes:
-- `-1`: Video is not ready. [`prepare`](#prepare) has not been called.
-- `-2`: Video has not started playing. [`play`](#play) has not been called.
+- `-1`: Video has not started playing. [`play`](#play) has not been called.
+- `-2`: Video is not ready. [`prepare`](#prepare) has not been called.
 
 #### `get_alpha`
 Retrieves the alpha or transparency of the video.
@@ -227,25 +226,39 @@ func.close()
 This will display a message on the console:
 > Video - Done with the generator stopped. Reason: Memory is full.
 
-#### `is_cache_full`
+#### _**property**_
+
+##### `clip`
+Gets the video clip object.
+
+##### `size`
+Gets the size of the video.
+
+##### `width`
+Gets the width of the video.
+
+##### `height`
+Gets the height of the video.
+
+##### `is_cache_full`
 Indicates whether the cache memory is full.
 
-#### `is_ready`
+##### `is_ready`
 Indicates whether the video is ready or [`prepare`](#prepare) has been called and is ready to play.
 
-#### `is_pause`
+##### `is_pause`
 Indicates whether the video is paused.
 
-#### `is_play`
+##### `is_play`
 Indicates whether the video is currently playing.
 
-#### `is_mute`
+##### `is_mute`
 Indicates whether the video is muted.
 
-#### `is_quit`
+##### `is_quit`
 Indicates whether the video has exited, or [`quit`](#quit) / [`close`](#close) has been called.
 
-#### `is_close`
+##### `is_close`
 Same as the [`is_quit`](#is_quit) method.
 
 #### `draw_and_update`
@@ -270,9 +283,9 @@ FYI, the frame obtained is not a raw frame.
 #### `preview`
 Displays a preview of the video. Equivalent to the code: `video.clip.preview(*args, **kwargs)`.
 
-You can change the type of preview function in the `_type_` parameter with 2 categories, namely:
+You can change the type of preview function in the `_type_` parameter with 3 categories, namely:
 - `clip`: from `clip.preview`.
-- `ipython-display`: from `clip.ipython_display`
+- `display-in-notebook`: from `clip.display_in_notebook`
 - `video-preview`: from `video_preview`.
 
 #### `prepare`
@@ -351,6 +364,19 @@ video << 5
 #### `seek`
 This method combines the functionality of [`previous`](#previous) and [`next`](#next) into a single function. To skip forward in the video, pass a positive value to the `distance` parameter. To rewind the video, pass a negative value.
 
+Similiar to the [`next`](#next) and [`previous`](#previous) methods, you can call this with the `and` operator using the `&`. syntax. For example:
+```py
+# regular call
+video.seek(5) # next
+# or
+video.seek(-5) # previous
+
+# calling with and
+video & 5 # next
+# or
+video & -5 # previous
+```
+
 #### `create_cache_frame`
 Creates a cache of frames. The difference between this and [`iter_chunk_cache_frame`](#iter_chunk_cache_frame) is that this method is not a generator. You can set the maximum number of frames to cache by passing the `max_frame` parameter as an integer or `None` if you want to cache all frames.
 
@@ -368,18 +394,18 @@ video.reset()
 
 #### `custom_effect`
 Applies or customizes an `fx` effect from MoviePy or the clip’s methods. There is an important parameter:
-- `_func_`: The `fx` function or method name as a string.
+- `_effect_s_or_method_`: The `fx` (`Effect`) class from fx or method name as a string.
 
 The remaining parameters are the arguments or keyword arguments for the `fx` function.
 
 For xample:
 ```py
-# set rotation to 180 degrees with clip.rotate(180)
-video.custom_effect('rotate', 180)
+# set rotation to 180 degrees with clip.rotated(180)
+video.custom_effect('rotated', 180)
 
 # method from fx
-import moviepy.video.fx.all as vfx
-video.custom_effect(vfx.rotate, 180)
+import moviepy.video.fx as fx
+video.custom_effect(fx.Rotate, 180)
 ```
 
 You can directly edit the video using `video.clip`, but it is strongly discouraged.
@@ -426,30 +452,21 @@ video.rotate(180)
 video @ 180
 ```
 
+#### `loop`
+Loops the video. The `loops` parameter specifies the number of times the video should be loops
+
+Like before, this method can be called using the `mul` operator with the `*` syntax. For example:
+```py
+# regular call
+video.loop(2)
+# calling with mul
+video * 2
+```
+
 #### `resize`
 Resizes the video in the clip. The `scale_or_size` parameter can take different types:
 - Integer type for scaling the video size. For example, 0.5 makes the video half its original size.
 - List or tuple type for specific dimensions. For example, `[100, 100]` or `(100, 100)` resizes the video to 100x100.
-
-Like before, this method can be called using the `mul` or `truediv` operators with the `*` and `/` syntax. For example:
-```py
-# regular call
-video.resize(2)
-# calling with mul
-video * 2
-
-# regular call
-video.resize(1/2)
-# or
-video.resize(0.5)
-# calling with truediv
-video / 2
-
-# both lists and tuples work similarly
-# they yield the same output
-video * (100, 100)
-video / (100, 100)
-```
 
 #### `mirror`
 Mirrors the video frame. The `axis` parameter determines the mirror axis: `'x'` for horizontal and `'y'` for vertical.
@@ -471,6 +488,15 @@ Applies an intro or outro by fading to or from black. The parameters for this me
 Cuts the video's duration. The parameters for this method are:
 - `start`: The starting point of the cut, in seconds.
 - `end`: The ending point of the cut, in seconds.
+
+You can call this methods using the `truediv` operator with the `/` syntax, but it will divide the video duration by the given division value. For example:
+```py
+div = 2
+
+video.cut(0, video.clip.duration / div)
+# same as
+video / div
+```
 
 #### `reverse`
 Reverses the video playback. This method has the following parameters:
@@ -616,6 +642,12 @@ The remaining methods have the following functions:
 - `__str__`: Returns brief information about the video.
 - `__copy__`: For copying using the `copy` method.
 
+### Function `ignore_warn`
+Used to ignore warnings from the PyGVideo or from MoviePy library. It is useful when you want to suppress warnings that are not important for your application.
+
+### Function `enable_warn`
+Used to enable warnings from the PyGVideo or from MoviePy library. It is useful when you want to see all warnings that are generated by the library.
+
 ### Function `quit`
 Exits, cleans up, and releases the video globally. All the videos you have loaded will be released. This function is highly recommended once you no longer need the video or when you exit the Pygame window.
 
@@ -637,14 +669,18 @@ This variable checks whether a video is in use or not. It will have the value `'
 
 ## Additional Information
 
-### What's new in version 1.3.0?
+### What's new in version 1.4.0.dev1?
 * Bug fixes and documentation.
+* Following a total updates from version 2.x.x of MoviePy.
 * Method changes.
 * Previewer updates.
-* Addition of new methods.
+* Addition of new methods and functions.
 * The `clip` attribute is now implemented as a property decorator.
-* Methods [`is_cache_full`](#is_cache_full), [`is_ready`](#is_ready), [`is_pause`](#is_pause), [`is_play`](#is_play), [`is_mute`](#is_mute), [`is_quit`](#is_quit), and [`is_close`](#is_close) are now property decorators, starting from version 1.3.0.
+* Methods [`is_cache_full`](#is_cache_full), [`is_ready`](#is_ready), [`is_pause`](#is_pause), [`is_play`](#is_play), [`is_mute`](#is_mute), [`is_quit`](#is_quit), and [`is_close`](#is_close) are now property decorators, starting from version 1.4.0.dev1.
 
 ### Kredit
-* Me ([AzzamMuhyala](https://github.com/azzammuhyala))
-* [ChatGPT](https://chatgpt.com) -- LOL
+* [AzzamMuhyala](https://github.com/azzammuhyala) -- Author. _Is me!_
+* [MoviePy](https://github.com/Zulko/moviepy) -- The MoviePy library.
+* [Pygame](https://github.com/pygame/pygame) -- The Pygame library.
+* [ChatGPT](https://chatgpt.com) -- _Yeah_.
+* BLACKBOXAI -- vscode extension. _TAB GAMING_.

@@ -1,8 +1,8 @@
 import pygame
 import typing
 
-from ._utils import asserter as _assert
-from ._utils import name as _name
+from ._utils import asserter
+from ._utils import name
 from . import _utils
 
 __all__ = [
@@ -34,17 +34,17 @@ def video_preview(
 
     ) -> None:
 
-    _assert(
+    asserter(
         isinstance(width_height, tuple | list | None),
-        TypeError(f'width_height must be tuples, lists or None, not {_name(width_height)}')
+        TypeError(f'width_height must be tuples, lists or None, not {name(width_height)}')
     )
-    _assert(
+    asserter(
         isinstance(fps, _utils.Number | None),
-        TypeError(f'fps must be integers, floats or None, not {_name(fps)}')
+        TypeError(f'fps must be integers, floats or None, not {name(fps)}')
     )
-    _assert(
+    asserter(
         isinstance(screen, pygame.Surface | None),
-        TypeError(f'screen must be surfaces or None, not {_name(screen)}')
+        TypeError(f'screen must be surfaces or None, not {name(screen)}')
     )
 
     # initialize pygame
@@ -55,7 +55,7 @@ def video_preview(
         width_height = (500, 500)
     else:
         wh_len = len(width_height)
-        _assert(
+        asserter(
             wh_len == 2,
             ValueError(f'width_height must contain 2 values, not {wh_len}')
         )
@@ -111,6 +111,7 @@ def video_preview(
 
                         log(
                             f'[INFO] Time:     {video.get_pos() / 1000}s\n' +
+                            f'       FPS:      {fps}\n' +
                             f'       Position: {mouse_pos}' +
                             (f'\n       Relative: {relative_pos}\n       Color:    {colour_str}' if hover_video else '')
                         )

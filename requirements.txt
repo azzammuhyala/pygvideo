@@ -1,2 +1,2 @@
 pygame>=2.5.0
-moviepy>=1.0.3
+moviepy>=2.1.1

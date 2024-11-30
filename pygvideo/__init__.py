@@ -4,16 +4,20 @@ PyGVideo, video for Pygame. Using MoviePy video module to read and organize vide
 
 import os
 
-from . import version as version
+from . import version
 from ._pygvideo import (
-    Video as Video,
-    quit as quit,
-    close as close
+    Video,
+    quit,
+    ignore_warn,
+    enable_warn,
+    close
 )
 
 __version__ = version.pygvideo_version
 __all__ = [
     'Video',
+    'ignore_warn',
+    'enable_warn',
     'quit',
     'close',
     'version'
