@@ -669,14 +669,39 @@ This variable checks whether a video is in use or not. It will have the value `'
 
 ## Additional Information
 
-### What's new in version 1.4.0.dev1?
-* Bug fixes and documentation.
-* Following a total updates from version 2.x.x of MoviePy.
-* Method changes.
-* Previewer updates.
-* Addition of new methods and functions.
-* The `clip` attribute is now implemented as a property decorator.
-* Methods [`is_cache_full`](#is_cache_full), [`is_ready`](#is_ready), [`is_pause`](#is_pause), [`is_play`](#is_play), [`is_mute`](#is_mute), [`is_quit`](#is_quit), and [`is_close`](#is_close) are now property decorators, starting from version 1.4.0.dev1.
+### What's new in version 1.4.0.dev2?
+* Test for errors during installation. Error console message:
+```log
+Collecting pygvideo==1.4.0.dev1
+  Downloading pygvideo-1.4.0.dev1.tar.gz (32 kB)
+  Preparing metadata (setup.py) ... error
+  error: subprocess-exited-with-error
+
+  × python setup.py egg_info did not run successfully.
+  │ exit code: 1
+  ╰─> [9 lines of output]
+      Traceback (most recent call last):
+        File "<string>", line 2, in <module>
+        File "<pip-setuptools-caller>", line 34, in <module>
+        File "C:\Users\USER-PC\AppData\Local\Temp\pip-install-tf8fll35\pygvideo_e5032119b6874eccbc7d96b67adf3ec3\setup.py", line 7, in <module>
+          with open('requirements.txt') as req:
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+      FileNotFoundError: [Errno 2] No such file or directory: 'requirements.txt'
+      pygame 2.6.1 (SDL 2.28.4, Python 3.12.4)
+      Hello from the pygame community. https://www.pygame.org/contribute.html
+      [end of output]
+
+  note: This error originates from a subprocess, and is likely not a problem with pip.
+error: metadata-generation-failed
+
+× Encountered error while generating package metadata.
+╰─> See above for output.
+
+note: This is an issue with the package mentioned above, not pip.
+hint: See above for details.
+```
+
+
 
 ### Kredit
 * [AzzamMuhyala](https://github.com/azzammuhyala) -- Author. _Is me!_
