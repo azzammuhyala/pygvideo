@@ -3,14 +3,35 @@ import typing
 
 from ._utils import asserter
 from ._utils import name
+
 from . import _utils
+from . import _constants
+
+if typing.TYPE_CHECKING:
+    from ._pygvideo import Video
 
 __all__ = [
     'video_preview'
 ]
 
-def _rgb_to_hex(r, g, b):
-    return "#{:02x}{:02x}{:02x}".format(r, g, b)
+AnsiStyle = typing.Literal['fg', 'bg']
+
+# function color format color RGB ansi
+def _color_rgb_ansi(r: int, g: int, b: int, style: AnsiStyle) -> str:
+    match style:
+        case 'fg':
+            return f'\u001b[38;2;{r};{g};{b}m'
+        case 'bg':
+            return f'\u001b[48;2;{r};{g};{b}m'
+        case _:
+            raise ValueError(f'invalid style: {style!r}, expected one of {AnsiStyle.__args__!r}')
+
+# function rgb to hex
+def _rgb_to_hex(r: int, g: int, b: int, style: AnsiStyle, color: bool) -> str:
+    fs = "#{:02x}{:02x}{:02x}".format(r, g, b)
+    if color:
+        return _color_rgb_ansi(r,g,b,style) + fs + '\033[0m'
+    return fs
 
 def _calculate_video_rect(canvas_wh: tuple[int, int], video_wh: tuple[int, int]) -> pygame.Rect:
     width_screen, height_screen = canvas_wh
@@ -26,11 +47,14 @@ def _calculate_video_rect(canvas_wh: tuple[int, int], video_wh: tuple[int, int])
 
 def video_preview(
 
-        video,
-        width_height: typing.Optional[tuple[int, int] | list[int, int]] = None,
+        video: 'Video',
+        width_height: typing.Optional[tuple[int, int] | list[int]] = None,
+        title: typing.Optional[str] = None,
         fps: typing.Optional[_utils.Number] = None,
         screen: typing.Optional[pygame.Surface] = None,
-        show_log: bool = True
+        show_log: bool = True,
+        color_log: bool = True,
+        ansi_style: typing.Literal['fg', 'bg'] = 'fg'
 
     ) -> None:
 
@@ -64,9 +88,10 @@ def video_preview(
     if screen is None:
         screen = pygame.display.set_mode(width_height, pygame.RESIZABLE)
 
-    pygame.display.set_caption('PyGVideo - Preview')
+    pygame.display.set_caption(f'PyGVideo - Preview{(' (' + str(title) + ')') if title else ''}')
 
     log = lambda message : print(message) if show_log else None
+    fwarn = lambda message : f'\033[33m(WARN: {message})\033[0m' if color_log else f'(WARN: {message})'
     running = True
     clock = pygame.time.Clock()
     fps = fps or video.get_fps()
@@ -100,6 +125,7 @@ def video_preview(
 
                     if event.button == 1:
 
+                        preview_fps = clock.get_fps()
                         mouse_pos = pygame.mouse.get_pos()
                         hover_video = video_rect.collidepoint(mouse_pos)
 
@@ -107,13 +133,16 @@ def video_preview(
                             relative_pos = (mouse_pos[0] - video_rect.left,
                                             mouse_pos[1] - video_rect.top)
                             color = frame.get_at(relative_pos)
-                            colour_str = f'({color[0]:>3},{color[1]:>3},{color[2]:>3}) {_rgb_to_hex(*color[0:3])}'
+                            r, g, b, a = color[0:4]
+                            colour_str = f'({r:>3},{g:>3},{b:>3}) {_rgb_to_hex(r, g, b, ansi_style, color_log)} alpha:{a}'
 
                         log(
-                            f'[INFO] Time:     {video.get_pos() / 1000}s\n' +
-                            f'       FPS:      {fps}\n' +
+                            f'[INFO] Time:     {video.get_pos() / 1000:.03f}s\n' +
+                            f'       FPS:      Preview={preview_fps:.03f}{(' ' + fwarn('FPS to low!')) if preview_fps < _constants.MIN_LOW_FPS else ''}, Video={video.get_fps():.03f}\n' +
                             f'       Position: {mouse_pos}' +
-                            (f'\n       Relative: {relative_pos}\n       Color:    {colour_str}' if hover_video else '')
+                        ((f'\n       Relative: {relative_pos}'
+                          f'\n       Color:    {colour_str}') if hover_video else (
+                          f'\n       ' + fwarn('Mouse position out of video area.')))
                         )
 
                 if (key := video.handle_event(event)) is not None:
@@ -162,6 +191,7 @@ def video_preview(
             frame = video.draw_and_update()
             frame = pygame.transform.scale(frame, video_rect.size)
 
+            screen.fill('black')
             screen.blit(frame, video_rect.topleft)
 
             pygame.display.flip()
@@ -171,4 +201,5 @@ def video_preview(
     finally:
         video.release()
         pygame.display.set_caption('pygame window')
+        pygame.mixer.quit()
         pygame.quit()

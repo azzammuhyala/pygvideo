@@ -56,24 +56,58 @@ while running:
 
     clock.tick(video.get_fps())
 
-pygvideo.quit()
+pygvideo.quit_all()
 pygame.quit()
 ```
 
-Another example:
+Another examples:
 
+_Edits a video_:
 ```py
 import pygvideo
 
 with pygvideo.Video('myvideo.mp4') as video:
     # add some effects
 
+    # example
+    # video.fade('in', 2).fade('out', 2)
+
     video.preview()
 
     # if you want to save your edited video:
     # video.clip.write_videofile('output.mp4')
 
-pygvideo.quit()
+pygvideo.quit_all()
+```
+
+_Ball moving animation_:
+```py
+import moviepy
+import pygvideo
+import numpy as np
+
+def make_frame(t):
+    height, width, radius = 480, 640, 30
+    frame = np.zeros((height, width, 3), dtype=np.uint8)
+
+    x = int(width * (0.5 + 0.2 * np.sin(t)))
+    y = int(height * 0.5)
+
+    for i in range(-radius, radius):
+        for j in range(-radius, radius):
+            if i**2 + j**2 <= radius**2:
+                frame[y + i, x + j] = (255, 0, 0)
+
+    return frame
+
+clipball = moviepy.VideoClip(make_frame, duration=6.25)
+clipball.fps = 24
+
+# show the preview video
+with pygvideo.Video(clipball) as video:
+    video.preview()
+
+pygvideo.quit_all()
 ```
 
 In fact, the MoviePy module has some fairly complex methods, and I still need to learn more about this module, so this is what I can provide for you so far :)
@@ -94,14 +128,16 @@ Here is a complete documentation explanation regarding PyGVideo:
 
 #### `__init__`
 This functions similarly to `VideoFileClip` in MoviePy and also includes the necessary properties for [`Video`](#class-video). In this method, the following parameters are included:
-- `filename_or_clip`: The video location or directly the `VideoFileClip`, `CompositeVideoClip` or `ImageSequenceClip` class. Ensure the video format is compatible and supported by [`Video`](#class-video).
+- `filename_or_clip`: The video location or directly the `VideoClip` class.
 - `target_resolution`: The target resolution. Similar to the [`resize`](#resize) method.
 - `logger`: Logger type, consisting of:
-    - `'bar'`: Displays a logger with a bar. Useful for tracking audio writing or caching.
+    - strings value `bar`: Displays a logger with a bar. Useful for tracking audio writing or caching.
+    - strings value `.global`: Sets the logger to global logger. You can set the logger in the `set_global_logger` function
     - `None`: No logger is displayed.
 - `has_mask`: Loads the video with alpha or transparency support. Only available for certain video formats such as WebM.
 - `load_audio_in_prepare`: Creates or generates a temporary audio file when the [`prepare`](#prepare) method is called. If set to `False`, the temporary audio will be loaded earlier. However, it is less recommended if you want to edit the video first before calling [`prepare`](#prepare).
-- `cache`: When set to `True`, this automatically stores video frames in the cache or places them in temporary frames. [`Video`](#class-video) will not need to retrieve frames from `get_frame` in `VideoFileClip`. This makes the video run more smoothly.
+- `cache`: When set to `True`, this automatically stores video frames in the cache or places them in temporary frames. [`Video`](#class-video) will not need to retrieve frames from `get_frame` in `VideoClip`. This makes the video run more smoothly.
+- `save_clip_to_global`: Saves all clip instances to global. This is useful for closing all replaced clips with call `quit_all` or `close_all` function.
 
 #### `reinit`
 Reload the video or refresh the video. If for example you have quited or closed the video, you can call reinit to reinitialize it.
@@ -116,7 +152,7 @@ Retrieves the original clip instance.
 Retrieves the clip instance.
 
 #### `get_filename`
-Retrieves the video filename path. This will return None if the clip is `CompositeVideoClip` or `ImageSequenceClip`.
+Retrieves the video filename path. This will return `None` if the clip is not `VideoFileClip`.
 
 #### `get_temp_audio`
 Retrieves the temporary audio filename path.
@@ -131,7 +167,7 @@ Retrieves the original size of the video clip in raw form, without any clip modi
 Retrieves the original size of the video clip.
 
 #### `get_size`
-Retrieves the current video size.
+Retrieves the current video size. Will return `None` if not set in [`set_size`](#set_size).
 
 #### `get_file_size`
 Retrieves the video file size (uses `os.path.getsize` to get the file size, so there may be slight differences, meaning this is just an estimated file size).
@@ -143,7 +179,7 @@ Retrieves the original width of the video clip in raw form, without any clip mod
 Retrieves the original width of the video clip.
 
 #### `get_width`
-Retrieves the current video width.
+Retrieves the current video width. Same as `get_size()[0]` in [`get_size`](#get_size)
 
 #### `get_original_height`
 Retrieves the original height of the video clip in raw form, without any clip modifications.
@@ -152,7 +188,7 @@ Retrieves the original height of the video clip in raw form, without any clip mo
 Retrieves the original height of the video clip.
 
 #### `get_height`
-Retrieves the current video height.
+Retrieves the current video height. Same as `get_size()[1]` in [`get_size`](#get_size)
 
 #### `get_loops`
 Retrieves the number of loops played by the video. The loop count will reset to 0 when [`prepare`](#prepare) is called.
@@ -172,7 +208,7 @@ Retrieves the duration of the video.
 Retrieves the start time of the video.
 
 #### `get_end`
-Retrieves the end time of the video.
+Retrieves the end time of the video. Will return `None` if clip.end is `None`.
 
 #### `get_total_frame`
 Retrieves the total number of video frames. Used this code: `int(clip.duration * clip.fps)`.
@@ -216,7 +252,7 @@ The generator returns `yield` values as follows:
 - `ran`: The total cache range at that moment, or you can get this through [`get_total_frame`](#get_total_frame).
 
 The generator also captures messages from the generator's `send` method, which, when called, will stop the generator process and display a message on the console:
-> Video - Done with the generator stopped. Reason: {MESSAGE FROM SEND PARAMETER}
+> PyGVideo - Done with the generator stopped. Reason: {MESSAGE FROM SEND PARAMETER}
 
 When you call the `send` function, you should also `close` it with stop to properly terminate the generator. Here's an example usage:
 ```py
@@ -224,7 +260,7 @@ func.send('Memory is full.')
 func.close()
 ```
 This will display a message on the console:
-> Video - Done with the generator stopped. Reason: Memory is full.
+> PyGVideo - Done with the generator stopped. Reason: Memory is full.
 
 #### _**property**_
 
@@ -381,7 +417,7 @@ video & -5 # previous
 Creates a cache of frames. The difference between this and [`iter_chunk_cache_frame`](#iter_chunk_cache_frame) is that this method is not a generator. You can set the maximum number of frames to cache by passing the `max_frame` parameter as an integer or `None` if you want to cache all frames.
 
 #### `clear_cache_frame`
-Deletes or clears the cache of frames. This method is called when you edit the video with [`custom_effect`](#custom_effect) or other [`Video`](#class-video) methods.
+Deletes or clears the cache of frames. This method is called when you edit the video with [`with_effects`](#with_effects) or other [`Video`](#class-video) methods.
 
 #### `reset`
 Resets the video clip's effects back to its original state. You can call this method using the `invert` operator with the `~` syntax. For example:
@@ -392,7 +428,7 @@ video.reset()
 ~video
 ```
 
-#### `custom_effect`
+#### `with_effects`
 Applies or customizes an `fx` effect from MoviePy or the clip’s methods. There is an important parameter:
 - `_effect_s_or_method_`: The `fx` (`Effect`) class from fx or method name as a string.
 
@@ -401,11 +437,21 @@ The remaining parameters are the arguments or keyword arguments for the `fx` fun
 For xample:
 ```py
 # set rotation to 180 degrees with clip.rotated(180)
-video.custom_effect('rotated', 180)
+video.with_effects('rotated', 180)
 
 # method from fx
-import moviepy.video.fx as fx
-video.custom_effect(fx.Rotate, 180)
+from moviepy.video import fx
+video.with_effects(fx.Rotate, 180)
+
+# you can set multiple effects at once like this:
+video.with_effects(
+    [fx.Resize(...),
+     fx.InvertColors(),
+     ...],
+    # this argument is ignored
+    (200, 200),
+    1
+)
 ```
 
 You can directly edit the video using `video.clip`, but it is strongly discouraged.
@@ -416,7 +462,7 @@ Inverts the video’s colors, making them negative.
 #### `grayscale`
 Converts the video to grayscale or black and white.
 
-#### `split`
+#### `split_colors`
 Splits the RGB color channels of a [`Video`](#class-video) instance into three new [`Video`](#class-video) instances (the original [`Video`](#class-video) is not modified).
 
 This method accepts initialization parameters for the three resulting videos simultaneously.
@@ -498,15 +544,21 @@ video.cut(0, video.clip.duration / div)
 video / div
 ```
 
+Besides `truediv` operator, you can also use `sub` operator with the `-` syntax to reduce the video duration. For example:
+```py
+sub = 10
+
+video.cut(0, video.clip.duration - sub)
+# same as
+video - sub
+```
+
 #### `reverse`
 Reverses the video playback. This method has the following parameters:
 - `step_sub`: Specifies the step size for cutting the video if an issue occurs during the reversal process. (`vfx.time_mirror` issue). The default is 0.01
 - `max_retries`: The maximum number of retries for video slicing.
 
-The method returns either `None` or one of the following codes:
-- `-1`: The retry limit was exceeded.
-- `-2`: The video duration is less than 0 seconds.
-- `None`: The video was successfully reversed.
+_INFO: For version 1.4.0 and above reverse returns the [`Video`](#class-video) class object itself and does not return `None` or any code._
 
 #### `concatenate_clip`
 concatenate the video itself with other videos in 1 video at once. The parameters for this method are:
@@ -651,8 +703,14 @@ Used to enable warnings from the PyGVideo or from MoviePy library. It is useful 
 ### Function `quit`
 Exits, cleans up, and releases the video globally. All the videos you have loaded will be released. This function is highly recommended once you no longer need the video or when you exit the Pygame window.
 
+### Function `quit_all`
+Exits, cleans up, and releases all the videos and clips globally.
+
 ### Function `close`
 This function is the same as the [`quit`](#function-quit) function.
+
+### Function `close_all`
+This function is the same as the [`quit_all`](#function-quit_all) function.
 
 ## Environment Variables
 
@@ -669,43 +727,37 @@ This variable checks whether a video is in use or not. It will have the value `'
 
 ## Additional Information
 
-### What's new in version 1.4.0.dev2?
-* Test for errors during installation. Error console message:
+### What's new in version 1.4.0 (release)?
+* Bug fixes and documentation.
+* Method changes.
+* Addition of new methods and functions.
+* `custom_effect` has now changed its name to [`with_effects`](#with_effects).
+* [`Video`](#class-video) class now supports `VideoClip` clip type, this means that MoviePy class which has `VideoClip` derivative can be used and managed in [`Video`](#class-video) class as long as it has the required attributes: `clip.duration`, `clip.fps`, and `clip.audio.duration`
+* [`Video`](#class-video) class can now handle `VideoClip`(s) that have no audio. (this will add silent audio)
+* [`Video`](#class-video) class methods some support for _method chaining_.
+* Fixs an errors during installation. Error console message:
 ```log
-Collecting pygvideo==1.4.0.dev1
-  Downloading pygvideo-1.4.0.dev1.tar.gz (32 kB)
-  Preparing metadata (setup.py) ... error
-  error: subprocess-exited-with-error
-
-  × python setup.py egg_info did not run successfully.
-  │ exit code: 1
-  ╰─> [9 lines of output]
-      Traceback (most recent call last):
-        File "<string>", line 2, in <module>
-        File "<pip-setuptools-caller>", line 34, in <module>
-        File "C:\Users\USER-PC\AppData\Local\Temp\pip-install-tf8fll35\pygvideo_e5032119b6874eccbc7d96b67adf3ec3\setup.py", line 7, in <module>
-          with open('requirements.txt') as req:
-               ^^^^^^^^^^^^^^^^^^^^^^^^
-      FileNotFoundError: [Errno 2] No such file or directory: 'requirements.txt'
-      pygame 2.6.1 (SDL 2.28.4, Python 3.12.4)
-      Hello from the pygame community. https://www.pygame.org/contribute.html
-      [end of output]
-
-  note: This error originates from a subprocess, and is likely not a problem with pip.
-error: metadata-generation-failed
-
-× Encountered error while generating package metadata.
-╰─> See above for output.
-
-note: This is an issue with the package mentioned above, not pip.
-hint: See above for details.
+Collecting pygvideo==1.4.0.dev2
+  Downloading pygvideo-1.4.0.dev2.tar.gz (33 kB)
+    ERROR: Command errored out with exit status 1:
+     command: 'C:\Users\WDAGUtilityAccount\AppData\Local\Programs\Python\Python310\python.exe' -c 'import io, os, sys, setuptools, tokenize; sys.argv[0] = '"'"'C:\\Users\\WDAGUtilityAccount\\AppData\\Local\\Temp\\pip-install-4qd99mh3\\pygvideo_4faba4afa1454cb3bfdf833e19e74b5e\\setup.py'"'"'; __file__='"'"'C:\\Users\\WDAGUtilityAccount\\AppData\\Local\\Temp\\pip-install-4qd99mh3\\pygvideo_4faba4afa1454cb3bfdf833e19e74b5e\\setup.py'"'"';f = getattr(tokenize, '"'"'open'"'"', open)(__file__) if os.path.exists(__file__) else io.StringIO('"'"'from setuptools import setup; setup()'"'"');code = f.read().replace('"'"'\r\n'"'"', '"'"'\n'"'"');f.close();exec(compile(code, __file__, '"'"'exec'"'"'))' egg_info --egg-base 'C:\Users\WDAGUtilityAccount\AppData\Local\Temp\pip-pip-egg-info-8kr5kvfj'
+         cwd: C:\Users\WDAGUtilityAccount\AppData\Local\Temp\pip-install-4qd99mh3\pygvideo_4faba4afa1454cb3bfdf833e19e74b5e\
+    Complete output (6 lines):
+    Traceback (most recent call last):
+      File "<string>", line 1, in <module>
+      File "C:\Users\WDAGUtilityAccount\AppData\Local\Temp\pip-install-4qd99mh3\pygvideo_4faba4afa1454cb3bfdf833e19e74b5e\setup.py", line 5, in <module>
+        exec(v.read(), {}, version_locals)
+      File "<string>", line 2, in <module>
+    ModuleNotFoundError: No module named 'pygame'
+    ----------------------------------------
+WARNING: Discarding https://files.pythonhosted.org/packages/d1/16/0a4d4f99301f80cd150cc293283d87c0f899d306092160809a2746f5ba75/pygvideo-1.4.0.dev2.tar.gz#sha256=572165884838ebe131602006f81c32134991ea87aa714dda057352cd4417836e (from https://pypi.org/simple/pygvideo/) (requires-python:>=3.10). Command errored out with exit status 1: python setup.py egg_info Check the logs for full command output.
+ERROR: Could not find a version that satisfies the requirement pygvideo==1.4.0.dev2 (from versions: 1.0.0, 1.0.1, 1.1.0, 1.2.0, 1.3.0, 1.4.0.dev1, 1.4.0.dev2)
+ERROR: No matching distribution found for pygvideo==1.4.0.dev2
 ```
-
-
 
 ### Kredit
 * [AzzamMuhyala](https://github.com/azzammuhyala) -- Author. _Is me!_
 * [MoviePy](https://github.com/Zulko/moviepy) -- The MoviePy library.
 * [Pygame](https://github.com/pygame/pygame) -- The Pygame library.
 * [ChatGPT](https://chatgpt.com) -- _Yeah_.
-* BLACKBOXAI -- vscode extension. _TAB GAMING_.
+* [BLACKBOXAI](https://www.blackbox.ai) -- vscode extension. _TAB GAMING_.

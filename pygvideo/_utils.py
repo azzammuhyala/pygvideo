@@ -2,18 +2,18 @@ import os
 import typing
 from pathlib import Path as PathL
 from moviepy import (
-    VideoFileClip,
-    CompositeVideoClip,
-    ImageSequenceClip,
-    AudioFileClip,
-    CompositeAudioClip,
+    VideoClip,
+    AudioClip,
     Effect
 )
 
+if typing.TYPE_CHECKING:
+    from ._pygvideo import Video
+
 Number = int | float
 Path = os.PathLike[str] | PathL
-SupportsClip = VideoFileClip | CompositeVideoClip | ImageSequenceClip
-SupportsAudioClip = AudioFileClip | CompositeAudioClip
+SupportsClip = VideoClip
+SupportsAudioClip = AudioClip
 MoviePyFx = Effect
 Excepts = Exception | BaseException
 NameMethod = str
@@ -38,9 +38,10 @@ def asserter(condition: bool, exception: Excepts | str, from_exception: Excepts 
 def name(obj: typing.Any) -> str:
     return type(obj).__name__
 
-T = typing.TypeVar('T')
+def get_save_value(value: Number, nmax: Number, nmin: Number) -> Number:
+    return min(nmax, max(nmin, value))
 
-class global_video(list, typing.MutableSequence[T]):
+class GlobalVideo(list['Video']):
 
     def __repr__(self) -> str:
         cls = self.__class__

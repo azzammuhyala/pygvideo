@@ -4,32 +4,21 @@ PyGVideo, video for Pygame. Using MoviePy video module to read and organize vide
 
 import os
 
-from . import version
-from ._pygvideo import (
-    Video,
-    quit,
-    ignore_warn,
-    enable_warn,
-    close
-)
+# Imports all pygvideo
+from . import _version as pygvideo_ver
+from ._pygvideo import __all__ as _pygvideo_all
+from ._pygvideo import *
 
-__version__ = version.pygvideo_version
-__all__ = [
-    'Video',
-    'ignore_warn',
-    'enable_warn',
-    'quit',
-    'close',
-    'version'
-]
+__version__ = pygvideo_ver.pygvideo_version
+__all__ = _pygvideo_all + ['pygvideo_ver']
 
 if 'PYGAME_VIDEO_HIDE_SUPPORT_PROMPT' not in os.environ:
     print(
-        f'pygvideo {version.pygvideo_version} ('
-        f'MoviePy {version.moviepy_version}, '
-        f'Pygame {version.pygame_version}, '
-        f'Pygame-SDL {version.pygameSDL_version}, '
-        f'Python {version.python_version})'
+        f'pygvideo {pygvideo_ver.pygvideo_version} ('
+        f'MoviePy {pygvideo_ver.moviepy_version}, '
+        f'Pygame {pygvideo_ver.pygame_version}, '
+        f'Pygame-SDL {pygvideo_ver.pygameSDL_version}, '
+        f'Python {pygvideo_ver.python_version})'
     )
 
-del os
+del os, _pygvideo_all
