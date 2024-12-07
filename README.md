@@ -1,11 +1,11 @@
 <div align="center">
-    <img src="https://raw.githubusercontent.com/pygame/pygame/main/docs/reST/_static/pygame_logo.svg" alt="Pygame Logo">
+    <img src="https://raw.githubusercontent.com/pygame/pygame/main/docs/reST/_static/pygame_logo.svg" alt="PyGame Logo">
     <h1></h1>
     <img src="https://zulko.github.io/moviepy/_static/logo_small.jpeg" alt="MoviePy Logo">
 </div>
 
 # pygvideo
-PyGVideo, video for Pygame. Using MoviePy video module to read and organize videos.
+PyGVideo, video for PyGame. Using MoviePy video module to read and organize videos.
 
 <div align="center">
     <a href="https://pepy.tech/project/pygvideo">
@@ -21,9 +21,9 @@ PyGVideo, video for Pygame. Using MoviePy video module to read and organize vide
 </div>
 
 ## Description
-PyGVideo or PyGameVideo is a Python library, particularly based on the [Pygame](https://www.pygame.org/) library, for video playback or editing. You can process or edit videos and play them directly on a Pygame screen. With the [MoviePy](https://zulko.github.io/moviepy/) module or library, you can edit videos such as trimming, cropping, or adding effects available in MoviePy.
+PyGVideo or PyGameVideo is a Python library, particularly based on the [PyGame](https://www.pygame.org/) library, for video playback or editing. You can process or edit videos and play them directly on a PyGame screen. With the [MoviePy](https://zulko.github.io/moviepy/) module or library, you can edit videos such as trimming, cropping, or adding effects available in MoviePy.
 
-PyGVideo can play videos and sync audio playback. The supported formats by PyGVideo are video formats that contain audio, such as MP4, MOV, AVI, MKV, WMV, FLV, and WebM. Although MoviePy supports non-audio formats like GIF, PyGVideo currently does not support these. PyGVideo works only on Python versions >=3.10, Pygame >= 2.5.0, and MoviePy >= 2.1.1. Below is a simple usage examples:
+PyGVideo can play videos and sync audio playback. The supported formats by PyGVideo are video formats that contain audio, such as MP4, MOV, AVI, MKV, WMV, FLV, and WebM. Although MoviePy supports non-audio formats like GIF, PyGVideo currently does not support these. PyGVideo works only on versions **Python>=3.10**, **PyGame>=2.5.0**, and **MoviePy>=2.1.1**. Below is a simple usage examples:
 
 ```py
 import pygame
@@ -70,12 +70,12 @@ with pygvideo.Video('myvideo.mp4') as video:
     # add some effects
 
     # example
-    # video.fade('in', 2).fade('out', 2)
+    video.fade('in', 1).fade('out', 1)
 
     video.preview()
 
-    # if you want to save your edited video:
-    # video.clip.write_videofile('output.mp4')
+    # if you want to save your edited video
+    video.clip.write_videofile('myvideo output.mp4')
 
 pygvideo.quit_all()
 ```
@@ -87,7 +87,7 @@ import pygvideo
 import numpy as np
 
 def make_frame(t):
-    height, width, radius = 480, 640, 30
+    height, width, radius = 500, 500, 30
     frame = np.zeros((height, width, 3), dtype=np.uint8)
 
     x = int(width * (0.5 + 0.2 * np.sin(t)))
@@ -101,7 +101,7 @@ def make_frame(t):
     return frame
 
 clipball = moviepy.VideoClip(make_frame, duration=6.25)
-clipball.fps = 24
+clipball.fps = 60
 
 # show the preview video
 with pygvideo.Video(clipball) as video:
@@ -110,13 +110,17 @@ with pygvideo.Video(clipball) as video:
 pygvideo.quit_all()
 ```
 
+> You can also create your own media player using PyGVideo. You can see the code on this [GitHub](https://github.com/azzammuhyala/pymediaplayer).
+
 In fact, the MoviePy module has some fairly complex methods, and I still need to learn more about this module, so this is what I can provide for you so far :)
 
 ## Installation
 Installation is quite simple, you just need to use the pip method with the following command:
-> pip install pygvideo
+```shell
+pip install pygvideo
+```
 
-Wait for the download process and for MoviePy (automatically) to be downloaded until it is complete.
+Wait for the download process for MoviePy and PyGame (automatically) to be downloaded until it is complete.
 
 Alternatively, you can also download this module from [GitHub](https://github.com/azzammuhyala/pygvideo) or through [PyPi](https://pypi.org/project/pygvideo).
 
@@ -129,15 +133,14 @@ Here is a complete documentation explanation regarding PyGVideo:
 #### `__init__`
 This functions similarly to `VideoFileClip` in MoviePy and also includes the necessary properties for [`Video`](#class-video). In this method, the following parameters are included:
 - `filename_or_clip`: The video location or directly the `VideoClip` class.
-- `target_resolution`: The target resolution. Similar to the [`resize`](#resize) method.
 - `logger`: Logger type, consisting of:
     - strings value `bar`: Displays a logger with a bar. Useful for tracking audio writing or caching.
     - strings value `.global`: Sets the logger to global logger. You can set the logger in the `set_global_logger` function
     - `None`: No logger is displayed.
-- `has_mask`: Loads the video with alpha or transparency support. Only available for certain video formats such as WebM.
 - `load_audio_in_prepare`: Creates or generates a temporary audio file when the [`prepare`](#prepare) method is called. If set to `False`, the temporary audio will be loaded earlier. However, it is less recommended if you want to edit the video first before calling [`prepare`](#prepare).
 - `cache`: When set to `True`, this automatically stores video frames in the cache or places them in temporary frames. [`Video`](#class-video) will not need to retrieve frames from `get_frame` in `VideoClip`. This makes the video run more smoothly.
 - `save_clip_to_global`: Saves all clip instances to global. This is useful for closing all replaced clips with call `quit_all` or `close_all` function.
+- `**kwargs`: Kwargs for VideoFileClip if `filename_or_clip` is filename.
 
 #### `reinit`
 Reload the video or refresh the video. If for example you have quited or closed the video, you can call reinit to reinitialize it.
@@ -252,7 +255,9 @@ The generator returns `yield` values as follows:
 - `ran`: The total cache range at that moment, or you can get this through [`get_total_frame`](#get_total_frame).
 
 The generator also captures messages from the generator's `send` method, which, when called, will stop the generator process and display a message on the console:
-> PyGVideo - Done with the generator stopped. Reason: {MESSAGE FROM SEND PARAMETER}
+```shell
+PyGVideo - Done with the generator stopped. Reason: {MESSAGE FROM SEND PARAMETER}
+```
 
 When you call the `send` function, you should also `close` it with stop to properly terminate the generator. Here's an example usage:
 ```py
@@ -260,7 +265,9 @@ func.send('Memory is full.')
 func.close()
 ```
 This will display a message on the console:
-> PyGVideo - Done with the generator stopped. Reason: Memory is full.
+```shell
+PyGVideo - Done with the generator stopped. Reason: Memory is full.
+```
 
 #### _**property**_
 
@@ -322,7 +329,16 @@ Displays a preview of the video. Equivalent to the code: `video.clip.preview(*ar
 You can change the type of preview function in the `_type_` parameter with 3 categories, namely:
 - `clip`: from `clip.preview`.
 - `display-in-notebook`: from `clip.display_in_notebook`
-- `video-preview`: from `video_preview`.
+- `video-preview`: from `video_preview`. Has parameters:
+    - `screen`: Screens or windows PyGame `pygame.display.set_mode`. (parameters `width_height` and `title` is ignore).
+    - `width_height`: Initials width and height of the window.
+    - `background_color`: Background colors of the window.
+    - `title`: Sets title window.
+    - `fps`: Sets FPS of the window.
+    - `show_log`: Shows log in the window.
+    - `ansi_color_type`: Types color log (hex color). Valid values: `RGBA`, `RGB`, `BGR`, `BGRA`, and `CMYK`.
+    - `ansi_style`: Types style log (hex color). Valid values: `fg` and `bg`.
+    - `ansi_luminance`: Provides log luminance (hex color).
 
 #### `prepare`
 Prepares the video and audio. This method loads the temporary audio `__temp__.mp3` / `__temp_X__.mp3` and then loads the audio into `pygame.mixer.music`. It also checks whether other [`Video`](#class-video) class instances are active/ready, and if not, raises a `pygame.error`. exception. This method is called after all video editing or configuration is completed so that it only needs to be played with [`play`](#play).
@@ -434,7 +450,7 @@ Applies or customizes an `fx` effect from MoviePy or the clip’s methods. There
 
 The remaining parameters are the arguments or keyword arguments for the `fx` function.
 
-For xample:
+For example:
 ```py
 # set rotation to 180 degrees with clip.rotated(180)
 video.with_effects('rotated', 180)
@@ -461,6 +477,23 @@ Inverts the video’s colors, making them negative.
 
 #### `grayscale`
 Converts the video to grayscale or black and white.
+
+#### `split_videos`
+Splits or cuts the video into multiple parts. There is an important parameter:
+- `split_positions`: A list of position seconds where the videos split.
+
+The remaining parameters are the arguments or keyword arguments for the [`Video`](#class-video) instances (the original [`Video`](#class-video) is not modified).
+
+For example:
+```py
+# video duration is 0-15
+split_videos = video.split_videos([2, 5, 10])
+
+video1 = split_videos[0] # at 0-2
+video2 = split_videos[1] # at 2-5
+video3 = split_videos[2] # at 5-10
+video4 = split_videos[3] # at 10-15 (the rest)
+```
 
 #### `split_colors`
 Splits the RGB color channels of a [`Video`](#class-video) instance into three new [`Video`](#class-video) instances (the original [`Video`](#class-video) is not modified).
@@ -558,7 +591,7 @@ Reverses the video playback. This method has the following parameters:
 - `step_sub`: Specifies the step size for cutting the video if an issue occurs during the reversal process. (`vfx.time_mirror` issue). The default is 0.01
 - `max_retries`: The maximum number of retries for video slicing.
 
-_INFO: For version 1.4.0 and above reverse returns the [`Video`](#class-video) class object itself and does not return `None` or any code._
+> INFO: For version 1.4.0 and above reverse returns the [`Video`](#class-video) class object itself and does not return `None` or any code.
 
 #### `concatenate_clip`
 concatenate the video itself with other videos in 1 video at once. The parameters for this method are:
@@ -619,7 +652,7 @@ Sets the volume of the video. The parameters are:
 Changes the position of the currently playing video in seconds. The `pos` parameter sets the position in seconds for the video to resume. This will raise an exception if the value exceeds the video duration.
 
 #### `handle_event`
-Handles events within the event loop in Pygame, serving as the default controller for the video. This method has the following parameters:
+Handles events within the event loop in PyGame, serving as the default controller for the video. This method has the following parameters:
 - `event`: The event from the `pygame.event.get` loop.
 - `volume_adjustment`: The amount to increase or decrease the volume. The default is 0.05.
 - `seek_adjustment`: The amount to skip forward or backward in the video, used with [`next`](#next) or [`previous`](#previous). The default is 5 seconds.
@@ -701,7 +734,7 @@ Used to ignore warnings from the PyGVideo or from MoviePy library. It is useful 
 Used to enable warnings from the PyGVideo or from MoviePy library. It is useful when you want to see all warnings that are generated by the library.
 
 ### Function `quit`
-Exits, cleans up, and releases the video globally. All the videos you have loaded will be released. This function is highly recommended once you no longer need the video or when you exit the Pygame window.
+Exits, cleans up, and releases the video globally. All the videos you have loaded will be released. This function is highly recommended once you no longer need the video or when you exit the PyGame window.
 
 ### Function `quit_all`
 Exits, cleans up, and releases all the videos and clips globally.
@@ -727,37 +760,14 @@ This variable checks whether a video is in use or not. It will have the value `'
 
 ## Additional Information
 
-### What's new in version 1.4.0 (release)?
+### What's new in version 1.4.1?
 * Bug fixes and documentation.
-* Method changes.
-* Addition of new methods and functions.
-* `custom_effect` has now changed its name to [`with_effects`](#with_effects).
-* [`Video`](#class-video) class now supports `VideoClip` clip type, this means that MoviePy class which has `VideoClip` derivative can be used and managed in [`Video`](#class-video) class as long as it has the required attributes: `clip.duration`, `clip.fps`, and `clip.audio.duration`
-* [`Video`](#class-video) class can now handle `VideoClip`(s) that have no audio. (this will add silent audio)
-* [`Video`](#class-video) class methods some support for _method chaining_.
-* Fixs an errors during installation. Error console message:
-```log
-Collecting pygvideo==1.4.0.dev2
-  Downloading pygvideo-1.4.0.dev2.tar.gz (33 kB)
-    ERROR: Command errored out with exit status 1:
-     command: 'C:\Users\WDAGUtilityAccount\AppData\Local\Programs\Python\Python310\python.exe' -c 'import io, os, sys, setuptools, tokenize; sys.argv[0] = '"'"'C:\\Users\\WDAGUtilityAccount\\AppData\\Local\\Temp\\pip-install-4qd99mh3\\pygvideo_4faba4afa1454cb3bfdf833e19e74b5e\\setup.py'"'"'; __file__='"'"'C:\\Users\\WDAGUtilityAccount\\AppData\\Local\\Temp\\pip-install-4qd99mh3\\pygvideo_4faba4afa1454cb3bfdf833e19e74b5e\\setup.py'"'"';f = getattr(tokenize, '"'"'open'"'"', open)(__file__) if os.path.exists(__file__) else io.StringIO('"'"'from setuptools import setup; setup()'"'"');code = f.read().replace('"'"'\r\n'"'"', '"'"'\n'"'"');f.close();exec(compile(code, __file__, '"'"'exec'"'"'))' egg_info --egg-base 'C:\Users\WDAGUtilityAccount\AppData\Local\Temp\pip-pip-egg-info-8kr5kvfj'
-         cwd: C:\Users\WDAGUtilityAccount\AppData\Local\Temp\pip-install-4qd99mh3\pygvideo_4faba4afa1454cb3bfdf833e19e74b5e\
-    Complete output (6 lines):
-    Traceback (most recent call last):
-      File "<string>", line 1, in <module>
-      File "C:\Users\WDAGUtilityAccount\AppData\Local\Temp\pip-install-4qd99mh3\pygvideo_4faba4afa1454cb3bfdf833e19e74b5e\setup.py", line 5, in <module>
-        exec(v.read(), {}, version_locals)
-      File "<string>", line 2, in <module>
-    ModuleNotFoundError: No module named 'pygame'
-    ----------------------------------------
-WARNING: Discarding https://files.pythonhosted.org/packages/d1/16/0a4d4f99301f80cd150cc293283d87c0f899d306092160809a2746f5ba75/pygvideo-1.4.0.dev2.tar.gz#sha256=572165884838ebe131602006f81c32134991ea87aa714dda057352cd4417836e (from https://pypi.org/simple/pygvideo/) (requires-python:>=3.10). Command errored out with exit status 1: python setup.py egg_info Check the logs for full command output.
-ERROR: Could not find a version that satisfies the requirement pygvideo==1.4.0.dev2 (from versions: 1.0.0, 1.0.1, 1.1.0, 1.2.0, 1.3.0, 1.4.0.dev1, 1.4.0.dev2)
-ERROR: No matching distribution found for pygvideo==1.4.0.dev2
-```
+* Addition of new method [`split_videos`](#split_videos).
+* Console info format changes on `video_preview` in [`preview`](#preview)
 
 ### Kredit
 * [AzzamMuhyala](https://github.com/azzammuhyala) -- Author. _Is me!_
 * [MoviePy](https://github.com/Zulko/moviepy) -- The MoviePy library.
-* [Pygame](https://github.com/pygame/pygame) -- The Pygame library.
+* [PyGame](https://github.com/pygame/pygame) -- The PyGame library.
 * [ChatGPT](https://chatgpt.com) -- _Yeah_.
 * [BLACKBOXAI](https://www.blackbox.ai) -- vscode extension. _TAB GAMING_.

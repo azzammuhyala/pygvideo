@@ -10,7 +10,7 @@ __all__ = [
     'python_version'
 ]
 
-pygvideo_version: str = '1.4.0'
+pygvideo_version: str = '1.4.1'
 moviepy_version: str = moviepy.__version__
 pygame_version: str = pygame.__version__
 pygameSDL_version: str = '.'.join(map(str, pygame.get_sdl_version()))

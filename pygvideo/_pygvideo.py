@@ -4,9 +4,9 @@ import warnings
 import numpy as np
 from moviepy.video import fx
 from moviepy import (
-    VideoFileClip,
     ImageSequenceClip,
     AudioArrayClip,
+    VideoFileClip,
     concatenate_videoclips,
     concatenate_audioclips
 )
@@ -16,9 +16,9 @@ from ._utils import (
     GlobalVideo,
     typing,
     os,
+    get_save_value,
     asserter,
-    name,
-    get_save_value
+    name
 )
 from . import _utils
 from . import _constants
@@ -45,63 +45,42 @@ class Video:
 
             self,
             filename_or_clip: _utils.Path | _utils.SupportsClip,
-            target_resolution: typing.Optional[typing.Any] = None,
             logger: proglog.ProgressBarLogger | typing.Literal['bar', '.global'] | None = '.global',
-            has_mask: bool = False,
             load_audio_in_prepare: bool = True,
             cache: bool = True,
-            save_clip_to_global: bool = True
+            save_clip_to_global: bool = True,
+            **kwargs
 
         ) -> None:
 
         """
-
-        A video that can be played to the `pygame` screen. For example:
-
-        ```
-        ... video_player = Video('intro.mp4') # load the video
-        ... video_player.set_fps(30)          # set the fps
-        ... video_player.prepare()            # load the audio
-        ... video_player.play()               # play the video and audio
-        ... while ...:
-        ...    for event in pygame.event.get():
-        ...        ...
-        ...        video.handle_event(event) # handle the event (OPTIONAL)
-        ...    frame = video_player.draw_and_update() # updated, will be returns a frame
-        ...    ...
-        ... video_player.quit() # clean up resources
-        ... ...
-        ```
-
         Parameters
         ----------
-        filename_or_clip:
+        `filename_or_clip`:
             Name the video file or clip directly. If you use the filename make sure the file extension is
             supported by ffmpeg. Supports clip class: VideoClip and derivative of VideoClip like VideoFileClip,
             etc.
-        target_resolution:
-            Target resolution. Almost the same as resize. (I think..).
-        logger:
+        `logger`:
             Showing logger/bar. If None, no logger will be shown.
-        has_mask:
-            Supports transparency/alpha. Depends on video format type.
-        load_audio_in_prepare:
+        `load_audio_in_prepare`:
             load or precisely write the temp audio when prepare is called.
-        cache:
+        `cache`:
             save frame to cache. (not recommended for videos with large duration and size).
-        save_clip_to_global:
+        `save_clip_to_global`:
             save the VideoClip to global. This is useful for cleaning or closing replaced VideoClips with call
             `quit_all` or `close_all` function.
+        `**kwargs`:
+            kwargs for VideoFileClip. (if filename_or_clip is filename).
 
         Documentation
         -------------
-        Full documentation is on [GitHub](https://github.com/azzammuhyala/pygvideo.git) or on
-        [PyPi](https://pypi.org/project/pygvideo).
+        Full documentation is on [GitHub](https://github.com/azzammuhyala/pygvideo) or on [PyPi](https://pypi.org/project/pygvideo).
 
         Bugs
         ----
         There may still be many bugs that occur either from the `Video` code or from `moviepy` itself.
         Play videos that are not too large or not too long so that they run optimally.
+        You can provide your information an error or bug issues to [GitHub Issues](https://github.com/azzammuhyala/pygvideo/issues).
 
         Warnings
         --------
@@ -111,7 +90,8 @@ class Video:
         * Don't play 2 videos at the same time.
         * Don't forget to close the video with `.quit()` or `.close()` when not in use or when the system exits.
 
-        Full Example:
+        Full Example
+        ------------
 
         ```
         import pygame
@@ -147,16 +127,14 @@ class Video:
         pygvideo.quit_all()
         pygame.quit()
         ```
-
         """
 
         self.__filename_or_clip = filename_or_clip
-        self.__target_resolution = target_resolution
         self.__logger = logger
-        self.__has_mask = bool(has_mask)
         self.__load_audio_in_prepare = bool(load_audio_in_prepare)
         self.__cache = bool(cache)
         self.__save_clip_to_global = bool(save_clip_to_global)
+        self.__kwargs = kwargs
 
         if isinstance(logger, str):
             self.__logger = logger.lower().strip() # convert to lowercase and strip whitespace
@@ -190,8 +168,7 @@ class Video:
         else:
             self.clip = VideoFileClip(
                 filename=filename_or_clip,
-                has_mask=has_mask,
-                target_resolution=target_resolution
+                **kwargs
             )
 
         # save an original clip
@@ -277,7 +254,7 @@ class Video:
 
     def __exit__(self, *args, **kwargs) -> None:
         # exit (in raise condition or not)
-        if hasattr(self, '_Video__clip') and isinstance(self.__clip, _utils.SupportsClip):
+        if hasattr(self, '_Video__clip') and self.__clip:
             self.quit()
 
     def __add__(self, clip_or_clips: typing.Union[_utils.SupportsClip, 'Video', tuple, list]):
@@ -375,14 +352,14 @@ class Video:
 
     def __repr__(self) -> str:
         filename = self.__clip.filename if isinstance(self.__clip, VideoFileClip) else self.__clip
+        kwargs = (', ' if self.__kwargs else '') + ', '.join([f'{kw}={value!r}' for kw, value in self.__kwargs.items()])
         return (
             self.__get_mod() + '('
             f'filename_or_clip={filename!r}, '
-            f'target_resolution={self.__target_resolution!r}, '
             f'logger={self.__logger!r}, '
-            f'has_mask={self.__has_mask!r}, '
             f'load_audio_in_prepare={self.__load_audio_in_prepare!r}, '
-            f'cache={self.__cache!r})'
+            f'cache={self.__cache!r}'
+            f'{kwargs})'
         )
 
     def __str__(self) -> str:
@@ -392,13 +369,14 @@ class Video:
 
     def __copy__(self) -> 'Video':
         self.__video_initialized()
+
         video = Video(
             filename_or_clip=self.__clip.copy(),
-            target_resolution=self.__target_resolution,
             logger=self.__logger,
-            has_mask=self.__has_mask,
             load_audio_in_prepare=self.__load_audio_in_prepare,
-            cache=self.__cache
+            cache=self.__cache,
+            save_clip_to_global=self.__save_clip_to_global,
+            **self.__kwargs
         )
 
         video._Video__cache_frames = self.__cache_frames.copy()
@@ -408,6 +386,9 @@ class Video:
         video.set_alpha(self.__alpha)
 
         return video
+
+    def __deepcopy__(self, memo: dict) -> 'Video':
+        return self.__copy__()
 
     def __get_logger(self):
         if self.__logger == '.global':
@@ -536,30 +517,32 @@ class Video:
         cls = self.__class__
         return f'{cls.__module__}.{cls.__qualname__}'
 
-    __deepcopy__ = __copy__
     copy = __copy__
 
     def reinit(self):
         self.__video_initialized()
-        # copy the isinstance clip before close it
-        is_clip = isinstance(self.__filename_or_clip, _utils.SupportsClip)
-        if is_clip:
-            clip = self.__clip.copy()
-        else:
-            clip = None
+        is_videofileclip = isinstance(self.__clip, VideoFileClip)
+        asserter(
+            is_videofileclip or not isinstance(self.__filename_or_clip, _utils.SupportsClip),
+            TypeError(
+                'cannot reinit Video if clip is not VideoFileClip, '
+                'reinit can be used if the parameter is filename '
+                '(make sure the target file still exists)'
+            )
+        )
 
         # quit or close then re-init
         self.quit()
-        # make a marker
+        # make a reinit marker
         self.__reinit = 1
         # init again
         self.__init__(
-            filename_or_clip=clip if is_clip else self.__filename_or_clip,
-            target_resolution=self.__target_resolution,
+            filename_or_clip=self.__clip.filename if is_videofileclip else self.__filename_or_clip,
             logger=self.__logger,
-            has_mask=self.__has_mask,
             load_audio_in_prepare=self.__load_audio_in_prepare,
-            cache=self.__cache
+            cache=self.__cache,
+            save_clip_to_global=self.save_clip_to_global,
+            **self.__kwargs
         )
         # remove a marker
         del self.__reinit
@@ -732,7 +715,7 @@ class Video:
 
         logger(message='PyGVideo - Create cache frames')
 
-        for frame_index in logger.iter_bar(chunk=range_iterable, bar_message=lambda _ : 'Creating cache frames'):
+        for frame_index in logger.iter_bar(index_frame=range_iterable, bar_message=lambda _ : 'Creating cache frames'):
             try:
                 frame = self.get_frame(frame_index * (1 / self.__clip.fps), get_original=True)
                 self.__add_cache(frame_index, frame)
@@ -762,16 +745,8 @@ class Video:
         return self.__filename_or_clip
 
     @property
-    def target_resolution(self):
-        return self.__target_resolution
-
-    @property
     def logger(self):
         return self.__logger
-
-    @property
-    def has_mask(self) -> bool:
-        return self.__has_mask
 
     @property
     def load_audio_in_prepare(self):
@@ -784,6 +759,10 @@ class Video:
     @property
     def save_clip_to_global(self):
         return self.__save_clip_to_global
+
+    @property
+    def kwargs(self):
+        return self.__kwargs
 
     @property
     def clip(self) -> _utils.SupportsClip:
@@ -1192,6 +1171,7 @@ class Video:
     def with_effects(self,
                      _effect_s_or_method_: _utils.MoviePyFx | tuple[_utils.MoviePyFx] | list[_utils.MoviePyFx] | _utils.NameMethod,
                      *args, **kwargs):
+
         self.__set_effect()
 
         if not isinstance(_effect_s_or_method_, _utils.NameMethod):
@@ -1214,10 +1194,60 @@ class Video:
     def grayscale(self):
         return self.with_effects(fx.BlackAndWhite)
 
-    def split_colors(self, *args, **kwargs) -> tuple['Video', 'Video', 'Video']:
+    def split_videos(self,
+                     split_positions: tuple[_utils.SecondsValue] | list[_utils.SecondsValue] | _utils.SecondsValue,
+                     *args, **kwargs) -> list['Video']:
+
         self.__set_effect()
 
-        self.__stop()
+        asserter(
+            isinstance(split_positions, list | tuple | _utils.Number),
+            TypeError(f'split_positions must be lists, tuples, integers or floats type, not {name(split_positions)}')
+        )
+
+        if isinstance(split_positions, _utils.Number):
+            split_positions = [split_positions]
+
+        logger = proglog.default_bar_logger(self.__get_logger())
+        cuts_video = []
+        current_pos = 0
+        i = 0
+
+        logger(message='PyGVideo - Split videos')
+
+        for pos in logger.iter_bar(index_pos=split_positions, bar_message=lambda _ : 'Separating video'):
+            asserter(
+                isinstance(pos, _utils.Number),
+                TypeError(f'split_positions at index {i} must be integers or floats type, not {name(pos)}')
+            )
+            asserter(
+                0 <= pos <= self.__clip.duration,
+                ValueError(f'split position {pos} at index {i} is out of range')
+            )
+
+            cuts_video.append(
+                Video(
+                    self.__clip.subclipped(current_pos, pos),
+                    *args, **kwargs
+                )
+            )
+            current_pos = pos
+            i += 1
+
+        # last split part
+        cuts_video.append(
+            Video(
+                self.__clip.subclipped(current_pos),
+                *args, **kwargs
+            )
+        )
+
+        logger(message='PyGVideo - Done.')
+
+        return cuts_video
+
+    def split_colors(self, *args, **kwargs) -> tuple['Video', 'Video', 'Video']:
+        self.__set_effect()
 
         logger = proglog.default_bar_logger(self.__get_logger())
         total_frame = self.get_total_frame()
@@ -1247,8 +1277,9 @@ class Video:
 
         logger(message='PyGVideo - Split colors video')
 
-        for i in logger.iter_bar(chunk=range(total_frame * 3),
+        for i in logger.iter_bar(index_frame=range(total_frame * 3),
                                  bar_message=lambda _ : f'Separating {channel + 1}/3 ({color_channel[channel]})'):
+
             frame_index = i % total_frame
 
             if frame_index == 0 and i != 0:
@@ -1285,11 +1316,10 @@ class Video:
             ValueError('rect outside the video area boundaries')
         )
 
-        self.with_effects('cropped', x1=rect.left,
-                                     y1=rect.top,
-                                     width=rect.width,
-                                     height=rect.height)
-        return self.resize(rect.size)
+        return self.with_effects('cropped', x1=rect.left,
+                                            y1=rect.top,
+                                            width=rect.width,
+                                            height=rect.height)
 
     def rotate(self, rotate: _utils.Number):
         asserter(
@@ -1337,7 +1367,7 @@ class Video:
             case _:
                 raise ValueError(f'unknown type named {type!r}')
 
-    def cut(self, start: _utils.SecondsValue, end: _utils.SecondsValue):
+    def cut(self, start: _utils.SecondsValue, end: typing.Optional[_utils.SecondsValue] = None):
         asserter(
             isinstance(start, _utils.SecondsValue),
             TypeError(f'start must be integers or floats, not {name(start)}')
@@ -1382,7 +1412,7 @@ class Video:
         while max_retries > 0:
             try:
                 self.cut(0, current_time)
-                # useless (moviepy ~2.1.1). It causes OSError exception
+                # there is a possibility that an error occurred:
                 # self.with_effects(fx.TimeMirror)
 
                 # using source code from time_mirror version moviepy 1.0.3

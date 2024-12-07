@@ -1,5 +1,5 @@
 """
-PyGVideo, video for Pygame. Using MoviePy video module to read and organize videos.
+PyGVideo, video for PyGame. Using MoviePy video module to read and organize videos.
 """
 
 import os
@@ -14,10 +14,10 @@ __all__ = _pygvideo_all + ['pygvideo_ver']
 
 if 'PYGAME_VIDEO_HIDE_SUPPORT_PROMPT' not in os.environ:
     print(
-        f'pygvideo {pygvideo_ver.pygvideo_version} ('
+        f'PyGVideo {pygvideo_ver.pygvideo_version} ('
         f'MoviePy {pygvideo_ver.moviepy_version}, '
-        f'Pygame {pygvideo_ver.pygame_version}, '
-        f'Pygame-SDL {pygvideo_ver.pygameSDL_version}, '
+        f'PyGame {pygvideo_ver.pygame_version}, '
+        f'PyGame-SDL {pygvideo_ver.pygameSDL_version}, '
         f'Python {pygvideo_ver.python_version})'
     )
 
